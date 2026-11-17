@@ -114,6 +114,20 @@ class SoundEngine {
 const sounds = new SoundEngine();
 
 const API = {
+    admin: {
+        async status() {
+            return await fetchJson('/admin/status');
+        },
+        async login(username, password) {
+            return await fetchJson('/admin/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+        },
+        async logout() {
+            return await fetchJson('/admin/logout', { method: 'POST' });
+        }
+    },
     vocab: {
         async getLists() {
             return await fetchJson('/lists');

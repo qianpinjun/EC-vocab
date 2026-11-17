@@ -31,6 +31,10 @@
                         <i class="fa-solid fa-pen-to-square"></i> 情境训练
                     </button>
                 </nav>
+
+                <button class="btn btn-secondary btn-sm" id="btnAdminAuth" title="管理员登录以修改词库">
+                    <i class="fa-solid fa-lock"></i> <span id="adminAuthText">管理员登录</span>
+                </button>
             </div>
         </header>
 
@@ -44,11 +48,28 @@
                         <p class="subtitle">浏览已收录词汇、管理学习单元或录入新单词。</p>
                     </div>
                     <div class="header-right">
-                        <button class="btn btn-secondary" id="btnNewListModal">
+                        <button class="btn btn-secondary admin-only" id="btnNewListModal" style="display: none;">
                             <i class="fa-solid fa-plus"></i> 新建单元
                         </button>
                         <button class="btn btn-primary" id="btnStartPracticeTop">
                             <i class="fa-solid fa-play"></i> 开始本单元训练
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Admin Cloud Sync Bar (GitHub Pages Cross-Device Sync) -->
+                <div class="toolbar-card admin-only" id="adminCloudBar" style="display: none; flex-wrap: wrap; gap: 10px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:240px;">
+                        <i class="fa-solid fa-cloud"></i>
+                        <span style="font-weight:600; white-space:nowrap;">??????:</span>
+                        <input type="password" id="githubTokenInput" class="form-input" style="max-width:280px;" placeholder="?? GitHub Token (?????????)">
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnSyncFromCloud">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> ?????
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSyncToCloud">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> ???????
                         </button>
                     </div>
                 </div>
@@ -61,14 +82,14 @@
                     </div>
                     <div class="toolbar-meta">
                         <span class="count-pill">收录 <strong id="listWordCount">0</strong> 词</span>
-                        <button class="btn-text-danger" id="btnDeleteList" title="删除当前单元">
+                        <button class="btn-text-danger admin-only" id="btnDeleteList" title="删除当前单元" style="display: none;">
                             <i class="fa-regular fa-trash-can"></i> 删除单元
                         </button>
                     </div>
                 </div>
 
                 <!-- Word Input Accordion / Drawers -->
-                <div class="input-grid">
+                <div class="input-grid admin-only" style="display: none;">
                     <!-- Single Word Entry -->
                     <div class="content-card">
                         <div class="card-head">
@@ -354,6 +375,30 @@ dialogue 对话，对白"></textarea>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" id="btnCancelListModal">取消</button>
                         <button type="submit" class="btn btn-primary">确认创建</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Admin Login Modal -->
+        <div class="modal-overlay" id="adminLoginModal" style="display: none;">
+            <div class="modal-dialog">
+                <div class="modal-title-row">
+                    <h3>管理员登录</h3>
+                    <button class="btn-close" id="btnCloseAdminModal">&times;</button>
+                </div>
+                <form id="formAdminLogin">
+                    <div class="field-group">
+                        <label>管理员账号</label>
+                        <input type="text" id="adminUsernameInput" class="form-input" placeholder="输入管理员账号" required autocomplete="username">
+                    </div>
+                    <div class="field-group">
+                        <label>密码</label>
+                        <input type="password" id="adminPasswordInput" class="form-input" placeholder="输入管理员密码" required autocomplete="current-password">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="btnCancelAdminModal">取消</button>
+                        <button type="submit" class="btn btn-primary">登录</button>
                     </div>
                 </form>
             </div>

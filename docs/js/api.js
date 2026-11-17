@@ -1,6 +1,17 @@
 // Static GitHub Pages Client-Side Engine (localStorage + Quiz & Story Engines)
 
 const STORAGE_KEY = 'ec_vocab_store_v1';
+const ADMIN_SESSION_KEY = 'ec_admin_session_v1';
+const GITHUB_TOKEN_KEY = 'ec_github_pat_v1';
+const DIRTY_KEY = 'ec_vocab_dirty_v1';
+
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'ec2026';
+
+const GITHUB_OWNER = 'qianpinjun';
+const GITHUB_REPO = 'EC-vocab';
+const GITHUB_BRANCH = 'main';
+const GITHUB_DATA_PATH = 'docs/data/vocab.json';
 
 // Clean Toast Notification
 function showToast(message, type = 'info') {
@@ -113,10 +124,34 @@ function loadStore() {
     return store;
 }
 
-function saveStore(store) {
+function saveStore(store, markDirty = false) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        if (markDirty) {
+            localStorage.setItem(DIRTY_KEY, '1');
+        }
     } catch (e) {}
+}
+
+function isAdminLoggedIn() {
+    try {
+        return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+
+function requireAdmin() {
+    if (!isAdminLoggedIn()) {
+        throw new Error('需要管理员登录后才能修改词库');
+    }
+}
+
+function utf8ToBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    bytes.forEach(b => { bin += String.fromCharCode(b); });
+    return btoa(bin);
 }
 
 function nextId(items) {
@@ -454,9 +489,106 @@ function generateAbsurdStory(errorWords) {
 }
 
 // ----------------- Client-Side API -----------------
+let initialCloudSyncDone = false;
+
 const API = {
+    admin: {
+        async status() {
+            const ok = isAdminLoggedIn();
+            return { success: true, is_admin: ok, username: ok ? ADMIN_USER : null };
+        },
+        async login(username, password) {
+            if ((username || '').trim() === ADMIN_USER && password === ADMIN_PASS) {
+                sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+                return { success: true, is_admin: true, username: ADMIN_USER, message: '管理员登录成功' };
+            }
+            throw new Error('管理员账号或密码错误');
+        },
+        async logout() {
+            sessionStorage.removeItem(ADMIN_SESSION_KEY);
+            return { success: true, is_admin: false, message: '已退出管理员模式' };
+        }
+    },
+    cloud: {
+        getToken() {
+            try { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; } catch (e) { return ''; }
+        },
+        setToken(token) {
+            try {
+                if (token) localStorage.setItem(GITHUB_TOKEN_KEY, token);
+                else localStorage.removeItem(GITHUB_TOKEN_KEY);
+            } catch (e) {}
+        },
+        async syncFromCloud(silent = false) {
+            const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_DATA_PATH}?t=${Date.now()}`;
+            let data = null;
+            try {
+                const res = await fetch(rawUrl, { cache: 'no-store' });
+                if (res.ok) data = await res.json();
+            } catch (e) {}
+
+            if (!data) {
+                try {
+                    const localRes = await fetch(`./data/vocab.json?t=${Date.now()}`, { cache: 'no-store' });
+                    if (localRes.ok) data = await localRes.json();
+                } catch (e) {}
+            }
+
+            if (!data || !Array.isArray(data.lists) || !Array.isArray(data.words)) {
+                if (!silent) throw new Error('未能从云端读取词库数据');
+                return false;
+            }
+            saveStore({ lists: data.lists, words: data.words }, false);
+            localStorage.removeItem(DIRTY_KEY);
+            return true;
+        },
+        async syncToCloud(token) {
+            requireAdmin();
+            const store = loadStore();
+            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_DATA_PATH}`;
+            const headers = {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+
+            let sha = null;
+            const getRes = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers });
+            if (getRes.ok) {
+                const meta = await getRes.json();
+                sha = meta.sha;
+            } else if (getRes.status !== 404) {
+                const err = await getRes.json().catch(() => ({}));
+                throw new Error(err.message || `GitHub API 错误 (${getRes.status})`);
+            }
+
+            const contentStr = JSON.stringify({ lists: store.lists, words: store.words }, null, 2);
+            const body = {
+                message: `Admin update vocab (${store.lists.length} lists, ${store.words.length} words)`,
+                content: utf8ToBase64(contentStr),
+                branch: GITHUB_BRANCH
+            };
+            if (sha) body.sha = sha;
+
+            const putRes = await fetch(apiUrl, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(body)
+            });
+            if (!putRes.ok) {
+                const err = await putRes.json().catch(() => ({}));
+                throw new Error(err.message || `推送失败 (${putRes.status})`);
+            }
+            localStorage.removeItem(DIRTY_KEY);
+            return { success: true };
+        }
+    },
     vocab: {
         async getLists() {
+            if (!initialCloudSyncDone && localStorage.getItem(DIRTY_KEY) !== '1') {
+                initialCloudSyncDone = true;
+                await API.cloud.syncFromCloud(true);
+            }
             const store = loadStore();
             const counts = {};
             for (const w of store.words) {
@@ -469,6 +601,7 @@ const API = {
             return { success: true, lists };
         },
         async createList(name, description = '') {
+            requireAdmin();
             const cleanName = (name || '').trim();
             if (!cleanName) throw new Error('词库名称不能为空');
             const store = loadStore();
@@ -481,15 +614,16 @@ const API = {
                 sort_order: maxOrder + 1,
                 created_at: new Date().toISOString()
             });
-            saveStore(store);
+            saveStore(store, true);
             return { success: true, list_id: id, message: '词库创建成功' };
         },
         async deleteList(listId) {
+            requireAdmin();
             const store = loadStore();
             const before = store.lists.length;
             store.lists = store.lists.filter(l => l.id !== Number(listId));
             store.words = store.words.filter(w => w.list_id !== Number(listId));
-            saveStore(store);
+            saveStore(store, true);
             if (store.lists.length === before) throw new Error('删除失败或词库不存在');
             return { success: true, message: '词库已删除' };
         },
@@ -501,6 +635,7 @@ const API = {
             return { success: true, words };
         },
         async addWord(listId, data) {
+            requireAdmin();
             const word = (data.word || '').trim();
             const meaning = (data.meaning || '').trim();
             if (!word || !meaning) throw new Error('英文单词和中文释义均不能为空');
@@ -519,10 +654,11 @@ const API = {
                 mastered: 0,
                 created_at: new Date().toISOString()
             });
-            saveStore(store);
+            saveStore(store, true);
             return { success: true, word_id: id, message: '单词添加成功' };
         },
         async batchAddWords(listId, text) {
+            requireAdmin();
             const parsed = [];
             for (const rawLine of (text || '').trim().split('\n')) {
                 const line = rawLine.trim();
@@ -560,14 +696,15 @@ const API = {
                     created_at: new Date().toISOString()
                 });
             }
-            saveStore(store);
+            saveStore(store, true);
             return { success: true, added_count: parsed.length, message: `成功录入 ${parsed.length} 个单词！` };
         },
         async deleteWord(wordId) {
+            requireAdmin();
             const store = loadStore();
             const before = store.words.length;
             store.words = store.words.filter(w => w.id !== Number(wordId));
-            saveStore(store);
+            saveStore(store, true);
             if (store.words.length === before) throw new Error('删除失败');
             return { success: true, message: '单词已删除' };
         }

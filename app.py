@@ -1,9 +1,10 @@
 import os
 import re
 import random
-from flask import Flask, request, jsonify, render_template
+from functools import wraps
+from flask import Flask, request, jsonify, render_template, session
 from flask_cors import CORS
-from config import SECRET_KEY, PORT, HOST, DEBUG
+from config import SECRET_KEY, PORT, HOST, DEBUG, ADMIN_USERNAME, ADMIN_PASSWORD
 from database import init_db
 from models import VocabListModel, WordModel
 from question_engine import generate_quiz_round, DEFAULT_DISTRACTORS
@@ -11,10 +12,44 @@ from story_engine import generate_absurd_story
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # Initialize database tables on startup
 init_db()
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('is_admin'):
+            return jsonify({'success': False, 'error': '需要管理员登录后才能修改词库'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# ----------------- Admin Auth Endpoints -----------------
+@app.route('/api/admin/status', methods=['GET'])
+def api_admin_status():
+    return jsonify({
+        'success': True,
+        'is_admin': bool(session.get('is_admin')),
+        'username': session.get('admin_user') if session.get('is_admin') else None
+    })
+
+@app.route('/api/admin/login', methods=['POST'])
+def api_admin_login():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        session['is_admin'] = True
+        session['admin_user'] = username
+        return jsonify({'success': True, 'is_admin': True, 'username': username, 'message': '管理员登录成功'})
+    return jsonify({'success': False, 'error': '管理员账号或密码错误'}), 401
+
+@app.route('/api/admin/logout', methods=['POST'])
+def api_admin_logout():
+    session.pop('is_admin', None)
+    session.pop('admin_user', None)
+    return jsonify({'success': True, 'is_admin': False, 'message': '已退出管理员模式'})
 
 # ----------------- Page Route -----------------
 @app.route('/')
@@ -28,6 +63,7 @@ def api_get_lists():
     return jsonify({'success': True, 'lists': lists})
 
 @app.route('/api/lists', methods=['POST'])
+@admin_required
 def api_create_list():
     data = request.get_json() or {}
     name = data.get('name', '').strip()
@@ -39,6 +75,7 @@ def api_create_list():
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/lists/<int:list_id>', methods=['DELETE'])
+@admin_required
 def api_delete_list(list_id):
     deleted = VocabListModel.delete(list_id)
     if deleted:
@@ -52,6 +89,7 @@ def api_get_words(list_id):
     return jsonify({'success': True, 'words': words})
 
 @app.route('/api/lists/<int:list_id>/words', methods=['POST'])
+@admin_required
 def api_add_word(list_id):
     data = request.get_json() or {}
     word = data.get('word', '').strip()
@@ -67,6 +105,7 @@ def api_add_word(list_id):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/lists/<int:list_id>/words/batch', methods=['POST'])
+@admin_required
 def api_batch_add_words(list_id):
     data = request.get_json() or {}
     text_content = data.get('text', '')
@@ -110,6 +149,7 @@ def api_batch_add_words(list_id):
     })
 
 @app.route('/api/words/<int:word_id>', methods=['DELETE'])
+@admin_required
 def api_delete_word(word_id):
     deleted = WordModel.delete_word(word_id)
     if deleted:

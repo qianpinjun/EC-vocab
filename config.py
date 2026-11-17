@@ -9,3 +9,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'ec-secret-key-2026-antigravity-puppy-
 PORT = int(os.environ.get('PORT', 5000))
 HOST = os.environ.get('HOST', '0.0.0.0')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+
+ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ec2026')

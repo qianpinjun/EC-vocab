@@ -4,13 +4,102 @@ const VocabModule = {
     currentListId: null,
     lists: [],
     words: [],
+    isAdmin: false,
+    adminUsername: null,
 
     async init() {
         this.bindEvents();
+        await this.checkAdminStatus();
         await this.loadLists();
     },
 
+    async checkAdminStatus() {
+        try {
+            const res = await API.admin.status();
+            this.isAdmin = Boolean(res.is_admin);
+            this.adminUsername = res.username || null;
+        } catch (e) {
+            this.isAdmin = false;
+            this.adminUsername = null;
+        }
+        this.refreshAdminUI();
+    },
+
+    refreshAdminUI() {
+        const authBtn = document.getElementById('btnAdminAuth');
+        const authText = document.getElementById('adminAuthText');
+        if (authBtn && authText) {
+            const icon = authBtn.querySelector('i');
+            if (this.isAdmin) {
+                authText.textContent = `${this.adminUsername || 'admin'} (退出)`;
+                if (icon) icon.className = 'fa-solid fa-unlock';
+            } else {
+                authText.textContent = '管理员登录';
+                if (icon) icon.className = 'fa-solid fa-lock';
+            }
+        }
+
+        document.querySelectorAll('.admin-only').forEach(el => {
+            if (el.classList.contains('input-grid')) {
+                el.style.display = this.isAdmin ? 'grid' : 'none';
+            } else {
+                el.style.display = this.isAdmin ? '' : 'none';
+            }
+        });
+
+        this.renderWordsTable(
+            (document.getElementById('wordSearchInput')?.value || '').trim().toLowerCase()
+        );
+    },
+
     bindEvents() {
+        // Admin Login / Logout
+        const btnAdminAuth = document.getElementById('btnAdminAuth');
+        const adminModal = document.getElementById('adminLoginModal');
+        const btnCloseAdmin = document.getElementById('btnCloseAdminModal');
+        const btnCancelAdmin = document.getElementById('btnCancelAdminModal');
+        const formAdminLogin = document.getElementById('formAdminLogin');
+
+        const closeAdminModal = () => { if (adminModal) adminModal.style.display = 'none'; };
+        if (btnCloseAdmin) btnCloseAdmin.addEventListener('click', closeAdminModal);
+        if (btnCancelAdmin) btnCancelAdmin.addEventListener('click', closeAdminModal);
+
+        if (btnAdminAuth) {
+            btnAdminAuth.addEventListener('click', async () => {
+                if (this.isAdmin) {
+                    if (confirm('确认退出管理员模式吗？')) {
+                        await API.admin.logout();
+                        this.isAdmin = false;
+                        this.adminUsername = null;
+                        this.refreshAdminUI();
+                        showToast('已退出管理员模式', 'info');
+                    }
+                } else if (adminModal) {
+                    adminModal.style.display = 'flex';
+                    document.getElementById('adminUsernameInput')?.focus();
+                }
+            });
+        }
+
+        if (formAdminLogin) {
+            formAdminLogin.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('adminUsernameInput').value.trim();
+                const password = document.getElementById('adminPasswordInput').value;
+                try {
+                    const res = await API.admin.login(username, password);
+                    this.isAdmin = Boolean(res.is_admin);
+                    this.adminUsername = res.username || username;
+                    closeAdminModal();
+                    formAdminLogin.reset();
+                    this.refreshAdminUI();
+                    showToast(res.message || '管理员登录成功', 'success');
+                } catch (err) {
+                    showToast(err.message, 'error');
+                }
+            });
+        }
+
         // List change
         const listSelect = document.getElementById('vocabListSelect');
         if (listSelect) {
@@ -232,24 +321,27 @@ const VocabModule = {
                     </span>
                 </td>
                 <td>
-                    <button class="btn-table-del" data-id="${item.id}" title="删除此词">
+                    ${this.isAdmin ? `<button class="btn-table-del" data-id="${item.id}" title="删除此词">
                         <i class="fa-regular fa-trash-can"></i>
-                    </button>
+                    </button>` : ''}
                 </td>
             `;
 
-            tr.querySelector('.btn-table-del').addEventListener('click', async () => {
-                if (confirm(`确认移除词汇 "${item.word}" 吗？`)) {
-                    try {
-                        await API.vocab.deleteWord(item.id);
-                        showToast(`已移除 ${item.word}`, 'success');
-                        await this.loadWords();
-                        await this.loadLists(this.currentListId);
-                    } catch (err) {
-                        showToast(err.message, 'error');
+            const delBtn = tr.querySelector('.btn-table-del');
+            if (delBtn) {
+                delBtn.addEventListener('click', async () => {
+                    if (confirm(`确认移除词汇 "${item.word}" 吗？`)) {
+                        try {
+                            await API.vocab.deleteWord(item.id);
+                            showToast(`已移除 ${item.word}`, 'success');
+                            await this.loadWords();
+                            await this.loadLists(this.currentListId);
+                        } catch (err) {
+                            showToast(err.message, 'error');
+                        }
                     }
-                }
-            });
+                });
+            }
 
             tbody.appendChild(tr);
         });
