@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EC Vocabulary Studio - 情境词汇研习系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Minimalist Professional Header -->
+        <header class="app-header">
+            <div class="header-inner">
+                <div class="brand">
+                    <div class="brand-icon">EC</div>
+                    <div class="brand-text">
+                        <h1>EC 词汇情境研习</h1>
+                        <span class="brand-sub">Contextual Vocabulary & Precision Practice</span>
+                    </div>
+                </div>
+
+                <nav class="nav-segment">
+                    <button class="segment-btn active" data-tab="vocab">
+                        <i class="fa-solid fa-book-open"></i> 词汇清单
+                    </button>
+                    <button class="segment-btn" data-tab="quiz">
+                        <i class="fa-solid fa-pen-to-square"></i> 情境训练
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="main-container">
+            <!-- TAB 1: 词汇库管理 (Vocabulary Management) -->
+            <section id="tabVocab" class="view-panel active">
+                <div class="panel-header">
+                    <div class="header-left">
+                        <h2>词汇库管理</h2>
+                        <p class="subtitle">浏览已收录词汇、管理学习单元或录入新单词。</p>
+                    </div>
+                    <div class="header-right">
+                        <button class="btn btn-secondary" id="btnNewListModal">
+                            <i class="fa-solid fa-plus"></i> 新建单元
+                        </button>
+                        <button class="btn btn-primary" id="btnStartPracticeTop">
+                            <i class="fa-solid fa-play"></i> 开始本单元训练
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Unit Selector Toolbar -->
+                <div class="toolbar-card">
+                    <div class="select-wrapper">
+                        <label for="vocabListSelect"><i class="fa-solid fa-folder"></i> 当前学习单元：</label>
+                        <select id="vocabListSelect" class="form-select"></select>
+                    </div>
+                    <div class="toolbar-meta">
+                        <span class="count-pill">收录 <strong id="listWordCount">0</strong> 词</span>
+                        <button class="btn-text-danger" id="btnDeleteList" title="删除当前单元">
+                            <i class="fa-regular fa-trash-can"></i> 删除单元
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Word Input Accordion / Drawers -->
+                <div class="input-grid">
+                    <!-- Single Word Entry -->
+                    <div class="content-card">
+                        <div class="card-head">
+                            <h3><i class="fa-solid fa-pen-nib"></i> 录入单词</h3>
+                        </div>
+                        <form id="formAddWord" class="form-compact">
+                            <div class="field-row">
+                                <div class="field-col">
+                                    <label>英文单词</label>
+                                    <input type="text" id="inputWord" class="form-input" placeholder="例如: duplicity" required autocomplete="off">
+                                </div>
+                                <div class="field-col">
+                                    <label>中文释义</label>
+                                    <input type="text" id="inputMeaning" class="form-input" placeholder="例如: 欺骗，奸诈" required>
+                                </div>
+                            </div>
+                            <div class="field-row">
+                                <div class="field-col">
+                                    <label>音标 (选填)</label>
+                                    <input type="text" id="inputPhonetic" class="form-input" placeholder="/djuːˈplɪsəti/">
+                                </div>
+                            </div>
+                            <div class="field-group">
+                                <label>情境例句 (选填，若留空系统将自动匹配语境)</label>
+                                <input type="text" id="inputExampleEn" class="form-input" placeholder="She was shocked by the duplicity of her former friend.">
+                            </div>
+                            <div class="field-group">
+                                <label>例句中文译文 (选填)</label>
+                                <input type="text" id="inputExampleCn" class="form-input" placeholder="她对昔日朋友的奸诈欺骗行为感到震惊。">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                添加到当前单元
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Batch Paste Import -->
+                    <div class="content-card">
+                        <div class="card-head">
+                            <h3><i class="fa-solid fa-file-arrow-up"></i> 批量文本导入</h3>
+                        </div>
+                        <p class="field-tip">每行一条，格式支持：<code>单词 中文释义</code> 或 <code>单词 - 释义</code>。</p>
+                        <textarea id="batchTextarea" class="form-textarea" rows="6" placeholder="例如：
+adequate 充足的，足够的
+ajar （门窗）微开的
+dialogue 对话，对白"></textarea>
+                        <div class="batch-actions">
+                            <button class="btn btn-secondary" id="btnBatchImport">
+                                <i class="fa-solid fa-check"></i> 解析并批量录入
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Word Table -->
+                <div class="content-card">
+                    <div class="table-bar">
+                        <div class="table-bar-left">
+                            <h3>单词索引</h3>
+                            <span class="meta-label" id="tableCountText">(共 0 词)</span>
+                        </div>
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="wordSearchInput" placeholder="检索单词或中文释义...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="editorial-table" id="wordsTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>英文词汇</th>
+                                    <th>中文释义</th>
+                                    <th>情境例句</th>
+                                    <th style="width: 80px;">错误记录</th>
+                                    <th style="width: 60px;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wordsTableBody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" id="wordsEmptyState" style="display: none;">
+                        <i class="fa-regular fa-folder-open empty-icon"></i>
+                        <p>当前单元尚无词汇，请在上方录入或批量导入。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: 情境测试与强化 (Quiz Arena) -->
+            <section id="tabQuiz" class="view-panel">
+                <!-- Start View -->
+                <div id="quizStartCard" class="start-panel">
+                    <div class="start-content">
+                        <h2>情境选择题训练</h2>
+                        <p class="start-desc">
+                            系统会将所选单元的所有词汇置入真实句式中进行情境盲测。<br>
+                            第 1 轮做错的单词将自动去重并编织为一篇<strong>反差情节记忆故事</strong>；后续轮次中，<strong>每错 1 题将在下一轮加罚 2 个随机词汇</strong>，直至全部答对通关。
+                        </p>
+
+                        <div class="quiz-select-wrap">
+                            <label><i class="fa-solid fa-folder-tree"></i> 选择训练单元：</label>
+                            <select id="quizListSelect" class="form-select select-wide"></select>
+                        </div>
+
+                        <button class="btn btn-primary btn-large" id="btnLaunchQuiz">
+                            开始第 1 轮情境训练
+                        </button>
+                    </div>
+                </div>
+
+                <!-- In-Progress Arena -->
+                <div id="quizArena" class="quiz-arena" style="display: none;">
+                    <div class="quiz-status-bar">
+                        <div class="round-meta">
+                            <span class="round-tag" id="arenaRoundBadge">第 1 轮</span>
+                            <span class="round-sub" id="arenaRoundDesc">全量语境考查</span>
+                        </div>
+                        <div class="progress-wrap">
+                            <div class="progress-labels">
+                                <span>进度：<b id="qCurrentIndex">1</b> / <b id="qTotalCount">10</b></span>
+                                <span>本轮错题：<b id="qMistakeCount" class="text-error">0</b></span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-track" id="qProgressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question Card -->
+                    <div class="question-paper" id="questionCard">
+                        <div class="question-meta-row">
+                            <span class="domain-tag" id="qCategoryTag">真实例句情境</span>
+                            <span class="type-hint">单项选择题</span>
+                        </div>
+
+                        <!-- Context Sentence -->
+                        <div class="scenario-panel">
+                            <div class="scenario-english" id="qScenarioEn">
+                                Loading sentence context...
+                            </div>
+                            <div class="scenario-hint-wrap">
+                                <button type="button" class="btn-hint" id="btnToggleCnHint">
+                                    <i class="fa-regular fa-lightbulb"></i> <span id="hintBtnText">查看中文情境提示 (已屏蔽答案)</span>
+                                </button>
+                                <div class="scenario-chinese" id="qScenarioCn" style="display: none;">
+                                    正在加载情境提示...
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="question-prompt">
+                            根据上方语境，选择最恰当填入空白处的英文单词：
+                        </div>
+
+                        <!-- 4 Options (A, B, C, D) -->
+                        <div class="options-container" id="optionsGrid">
+                            <!-- Dynamic Options -->
+                        </div>
+
+                        <!-- Instant Feedback Banner -->
+                        <div class="feedback-card" id="feedbackBanner" style="display: none;">
+                            <div class="feedback-text" id="feedbackContent"></div>
+                            <button class="btn btn-secondary btn-sm" id="btnNextQuestion">下一题 &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result View -->
+                <div id="quizResultCard" class="result-panel" style="display: none;">
+                    <div class="result-summary">
+                        <h2 id="resultTitle">第 1 轮训练完成</h2>
+                        <p class="subtitle" id="resultSubtitle">训练表现与错词统计汇总</p>
+                    </div>
+
+                    <!-- Score Metrics -->
+                    <div class="metric-row">
+                        <div class="metric-item">
+                            <span class="metric-title">本轮总题数</span>
+                            <span class="metric-num" id="resTotalQ">0</span>
+                        </div>
+                        <div class="metric-item metric-correct">
+                            <span class="metric-title">正确题数</span>
+                            <span class="metric-num" id="resCorrectQ">0</span>
+                        </div>
+                        <div class="metric-item metric-error">
+                            <span class="metric-title">错题数</span>
+                            <span class="metric-num" id="resMistakesQ">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Section: Mistake Table -->
+                    <div class="mistake-section" id="mistakeReviewSection" style="display: none;">
+                        <div class="sub-heading">
+                            <h3><i class="fa-solid fa-list-check"></i> 错题详细核对表</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="editorial-table">
+                                <thead>
+                                    <tr>
+                                        <th>考查词汇</th>
+                                        <th>实际正确释义 (正确答案)</th>
+                                        <th>你选错的选项</th>
+                                        <th>题目情境语境</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mistakeTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Section: Absurd Story -->
+                    <div class="story-panel" id="absurdStorySection" style="display: none;">
+                        <div class="story-header">
+                            <div>
+                                <span class="story-tag">记忆强化故事</span>
+                                <h3 id="storyBookTitle">错词语境融合小故事</h3>
+                            </div>
+                            <div class="story-tools">
+                                <button class="btn btn-secondary btn-sm" id="btnSpeakStory">
+                                    <i class="fa-solid fa-volume-high"></i> 朗读故事
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="btnCopyStory">
+                                    <i class="fa-regular fa-copy"></i> 复制全文
+                                </button>
+                            </div>
+                        </div>
+                        <div class="story-body" id="storyContentBox">
+                            <!-- Story paragraphs -->
+                        </div>
+                        <div class="story-hint">
+                            <i class="fa-regular fa-compass"></i> 本故事融合了您在第 1 轮中答错的全部词汇，结合夸张反差情节加深神经联结。
+                        </div>
+                    </div>
+
+                    <!-- Section: Penalty Round Trigger -->
+                    <div class="penalty-panel" id="penaltySection" style="display: none;">
+                        <div class="penalty-box">
+                            <h4><i class="fa-solid fa-rotate-right"></i> 下一轮强化规则</h4>
+                            <p id="penaltyExplain">本轮共产生错词。下一轮将根据规则：每错一个追加两个随机单词，继续出题，直到全对！</p>
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-primary btn-large" id="btnEnterPenaltyRound">
+                                进入下一轮强化训练
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Section: Victory Celebration -->
+                    <div class="victory-panel" id="victorySection" style="display: none;">
+                        <div class="victory-card">
+                            <div class="victory-mark">&#10003;</div>
+                            <h2>全对通关！</h2>
+                            <p>您已在重重加词挑战下顺利攻克本轮所有词汇，达到了 100% 正确率！</p>
+                            <div class="action-row">
+                                <button class="btn btn-primary" id="btnBackToVocab">返回词汇库</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- New List Modal -->
+        <div class="modal-overlay" id="newListModal" style="display: none;">
+            <div class="modal-dialog">
+                <div class="modal-title-row">
+                    <h3>新建词汇单元</h3>
+                    <button class="btn-close" id="btnCloseListModal">&times;</button>
+                </div>
+                <form id="formCreateList">
+                    <div class="field-group">
+                        <label>单元名称</label>
+                        <input type="text" id="newListName" class="form-input" placeholder="例如: Packet 4 - Vocabulary Workshop" required>
+                    </div>
+                    <div class="field-group">
+                        <label>单元描述 (选填)</label>
+                        <input type="text" id="newListDesc" class="form-input" placeholder="例如: 第四周强化词汇">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="btnCancelListModal">取消</button>
+                        <button type="submit" class="btn btn-primary">确认创建</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Global Toast Notifications -->
+        <div class="toast-stack" id="toastContainer"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/vocab.js"></script>
+    <script src="/static/js/quiz.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
