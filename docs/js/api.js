@@ -1,17 +1,8 @@
-// Static GitHub Pages Client-Side Engine (localStorage + Quiz & Story Engines)
+// Static GitHub Pages Client-Side Engine
+// Supports Multi-User Accounts + Per-User Word Lists + Optional Supabase Cross-Device Sync
 
-const STORAGE_KEY = 'ec_vocab_store_v1';
-const ADMIN_SESSION_KEY = 'ec_admin_session_v1';
-const GITHUB_TOKEN_KEY = 'ec_github_pat_v1';
-const DIRTY_KEY = 'ec_vocab_dirty_v1';
-
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'ec2026';
-
-const GITHUB_OWNER = 'qianpinjun';
-const GITHUB_REPO = 'EC-vocab';
-const GITHUB_BRANCH = 'main';
-const GITHUB_DATA_PATH = 'docs/data/vocab.json';
+const ACCOUNTS_KEY = 'ec_accounts_v2';
+const SESSION_KEY = 'ec_current_user_v2';
 
 // Clean Toast Notification
 function showToast(message, type = 'info') {
@@ -103,55 +94,135 @@ class SoundEngine {
 
 const sounds = new SoundEngine();
 
-// ----------------- LocalStorage Store -----------------
-function loadStore() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed.lists) && Array.isArray(parsed.words)) {
-                return parsed;
-            }
-        }
-    } catch (e) {}
-
+// ----------------- Auth & Multi-User Store -----------------
+function cloneSeedData() {
     const seed = window.EC_SEED_DATA || { lists: [], words: [] };
-    const store = {
+    return {
         lists: seed.lists.map(l => ({ ...l })),
         words: seed.words.map(w => ({ ...w }))
     };
-    saveStore(store);
-    return store;
 }
 
-function saveStore(store, markDirty = false) {
+async function hashPassword(username, password) {
+    const raw = `ec_salt_2026:${username.toLowerCase()}:${password}`;
+    if (window.crypto && window.crypto.subtle) {
+        const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    let h = 2166136261;
+    for (let i = 0; i < raw.length; i++) {
+        h ^= raw.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return `fnv1a:${(h >>> 0).toString(16)}`;
+}
+
+function getCloudConfig() {
+    const cfg = window.EC_CLOUD_CONFIG || {};
+    const url = (cfg.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+    const key = (cfg.SUPABASE_ANON_KEY || '').trim();
+    return (url && key) ? { url, key } : null;
+}
+
+async function supabaseFetch(path, options = {}) {
+    const cfg = getCloudConfig();
+    if (!cfg) return null;
+    const headers = {
+        'apikey': cfg.key,
+        'Authorization': `Bearer ${cfg.key}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    const res = await fetch(`${cfg.url}/rest/v1/${path}`, { ...options, headers });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || err.hint || `云端同步错误 (${res.status})`);
+    }
+    if (res.status === 204) return null;
+    return await res.json().catch(() => null);
+}
+
+function loadLocalAccounts() {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-        if (markDirty) {
-            localStorage.setItem(DIRTY_KEY, '1');
+        const raw = localStorage.getItem(ACCOUNTS_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        }
+    } catch (e) {}
+    return {};
+}
+
+function saveLocalAccounts(accounts) {
+    try {
+        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    } catch (e) {}
+}
+
+function getSessionUsername() {
+    try {
+        return sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY) || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setSessionUsername(username) {
+    try {
+        if (username) {
+            sessionStorage.setItem(SESSION_KEY, username);
+            localStorage.setItem(SESSION_KEY, username);
+        } else {
+            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(SESSION_KEY);
         }
     } catch (e) {}
 }
 
-function isAdminLoggedIn() {
-    try {
-        return sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
-    } catch (e) {
-        return false;
+function requireUser() {
+    const uname = getSessionUsername();
+    if (!uname) throw new Error('请先登录账号');
+    const accounts = loadLocalAccounts();
+    const acc = accounts[uname.toLowerCase()];
+    if (!acc) {
+        setSessionUsername(null);
+        throw new Error('登录状态已失效，请重新登录');
     }
+    return acc;
 }
 
-function requireAdmin() {
-    if (!isAdminLoggedIn()) {
-        throw new Error('需要管理员登录后才能修改词库');
+function loadUserStore() {
+    const acc = requireUser();
+    if (!acc.data || !Array.isArray(acc.data.lists) || !Array.isArray(acc.data.words)) {
+        acc.data = cloneSeedData();
     }
+    return acc.data;
 }
 
-function utf8ToBase64(str) {
-    const bytes = new TextEncoder().encode(str);
-    let bin = '';
-    bytes.forEach(b => { bin += String.fromCharCode(b); });
-    return btoa(bin);
+async function saveUserStore(store) {
+    const uname = getSessionUsername();
+    if (!uname) return;
+    const key = uname.toLowerCase();
+    const accounts = loadLocalAccounts();
+    if (!accounts[key]) return;
+    accounts[key].data = store;
+    saveLocalAccounts(accounts);
+
+    if (getCloudConfig()) {
+        try {
+            await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}`, {
+                method: 'PATCH',
+                headers: { 'Prefer': 'return=minimal' },
+                body: JSON.stringify({
+                    data: store,
+                    updated_at: new Date().toISOString()
+                })
+            });
+        } catch (e) {
+            console.error('Cloud sync failed:', e);
+            showToast('本地已保存，但云端同步失败: ' + e.message, 'warning');
+        }
+    }
 }
 
 function nextId(items) {
@@ -489,107 +560,129 @@ function generateAbsurdStory(errorWords) {
 }
 
 // ----------------- Client-Side API -----------------
-let initialCloudSyncDone = false;
-
 const API = {
-    admin: {
+    auth: {
         async status() {
-            const ok = isAdminLoggedIn();
-            return { success: true, is_admin: ok, username: ok ? ADMIN_USER : null };
+            const uname = getSessionUsername();
+            if (!uname) return { success: true, logged_in: false, user: null };
+
+            const key = uname.toLowerCase();
+            const accounts = loadLocalAccounts();
+
+            if (getCloudConfig()) {
+                try {
+                    const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,email,password_hash,data`);
+                    if (rows && rows.length > 0) {
+                        const row = rows[0];
+                        accounts[key] = {
+                            username: row.username,
+                            email: row.email || '',
+                            password_hash: row.password_hash,
+                            data: row.data || cloneSeedData()
+                        };
+                        saveLocalAccounts(accounts);
+                        return { success: true, logged_in: true, user: { username: row.username, email: row.email || '' } };
+                    }
+                } catch (e) {
+                    console.warn('Cloud status refresh failed, using local cache:', e);
+                }
+            }
+
+            if (accounts[key]) {
+                return {
+                    success: true,
+                    logged_in: true,
+                    user: { username: accounts[key].username, email: accounts[key].email || '' }
+                };
+            }
+            setSessionUsername(null);
+            return { success: true, logged_in: false, user: null };
         },
         async login(username, password) {
-            if ((username || '').trim() === ADMIN_USER && password === ADMIN_PASS) {
-                sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
-                return { success: true, is_admin: true, username: ADMIN_USER, message: '管理员登录成功' };
+            const uname = (username || '').trim();
+            if (!uname || !password) throw new Error('请输入用户名和密码');
+            const key = uname.toLowerCase();
+            const pwHash = await hashPassword(key, password);
+            const accounts = loadLocalAccounts();
+
+            if (getCloudConfig()) {
+                const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,email,password_hash,data`);
+                if (!rows || rows.length === 0 || rows[0].password_hash !== pwHash) {
+                    throw new Error('用户名或密码错误');
+                }
+                const row = rows[0];
+                accounts[key] = {
+                    username: row.username,
+                    email: row.email || '',
+                    password_hash: row.password_hash,
+                    data: row.data || cloneSeedData()
+                };
+                saveLocalAccounts(accounts);
+                setSessionUsername(row.username);
+                return { success: true, logged_in: true, user: { username: row.username, email: row.email || '' }, message: `欢迎回来，${row.username}！` };
             }
-            throw new Error('管理员账号或密码错误');
+
+            const acc = accounts[key];
+            if (!acc || acc.password_hash !== pwHash) {
+                throw new Error('用户名或密码错误');
+            }
+            setSessionUsername(acc.username);
+            return { success: true, logged_in: true, user: { username: acc.username, email: acc.email || '' }, message: `欢迎回来，${acc.username}！` };
+        },
+        async register(username, password, email = '') {
+            const uname = (username || '').trim();
+            if (uname.length < 2) throw new Error('用户名至少需要 2 个字符');
+            if ((password || '').length < 4) throw new Error('密码至少需要 4 个字符');
+
+            const key = uname.toLowerCase();
+            const pwHash = await hashPassword(key, password);
+            const seedData = cloneSeedData();
+            const accounts = loadLocalAccounts();
+
+            if (getCloudConfig()) {
+                const existing = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username`);
+                if (existing && existing.length > 0) {
+                    throw new Error('该用户名已被注册');
+                }
+                await supabaseFetch('ec_users', {
+                    method: 'POST',
+                    headers: { 'Prefer': 'return=minimal' },
+                    body: JSON.stringify({
+                        username: key,
+                        display_name: uname,
+                        email: (email || '').trim(),
+                        password_hash: pwHash,
+                        data: seedData,
+                        updated_at: new Date().toISOString()
+                    })
+                });
+            } else if (accounts[key]) {
+                throw new Error('该用户名已被注册');
+            }
+
+            accounts[key] = {
+                username: uname,
+                email: (email || '').trim(),
+                password_hash: pwHash,
+                data: seedData
+            };
+            saveLocalAccounts(accounts);
+            setSessionUsername(uname);
+            return {
+                success: true,
+                logged_in: true,
+                user: { username: uname, email: (email || '').trim() },
+                message: '注册成功，已自动为您导入基础词库！'
+            };
         },
         async logout() {
-            sessionStorage.removeItem(ADMIN_SESSION_KEY);
-            return { success: true, is_admin: false, message: '已退出管理员模式' };
-        }
-    },
-    cloud: {
-        getToken() {
-            try { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; } catch (e) { return ''; }
-        },
-        setToken(token) {
-            try {
-                if (token) localStorage.setItem(GITHUB_TOKEN_KEY, token);
-                else localStorage.removeItem(GITHUB_TOKEN_KEY);
-            } catch (e) {}
-        },
-        async syncFromCloud(silent = false) {
-            const rawUrl = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_DATA_PATH}?t=${Date.now()}`;
-            let data = null;
-            try {
-                const res = await fetch(rawUrl, { cache: 'no-store' });
-                if (res.ok) data = await res.json();
-            } catch (e) {}
-
-            if (!data) {
-                try {
-                    const localRes = await fetch(`./data/vocab.json?t=${Date.now()}`, { cache: 'no-store' });
-                    if (localRes.ok) data = await localRes.json();
-                } catch (e) {}
-            }
-
-            if (!data || !Array.isArray(data.lists) || !Array.isArray(data.words)) {
-                if (!silent) throw new Error('未能从云端读取词库数据');
-                return false;
-            }
-            saveStore({ lists: data.lists, words: data.words }, false);
-            localStorage.removeItem(DIRTY_KEY);
-            return true;
-        },
-        async syncToCloud(token) {
-            requireAdmin();
-            const store = loadStore();
-            const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_DATA_PATH}`;
-            const headers = {
-                'Accept': 'application/vnd.github+json',
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
-
-            let sha = null;
-            const getRes = await fetch(`${apiUrl}?ref=${GITHUB_BRANCH}&t=${Date.now()}`, { headers });
-            if (getRes.ok) {
-                const meta = await getRes.json();
-                sha = meta.sha;
-            } else if (getRes.status !== 404) {
-                const err = await getRes.json().catch(() => ({}));
-                throw new Error(err.message || `GitHub API 错误 (${getRes.status})`);
-            }
-
-            const contentStr = JSON.stringify({ lists: store.lists, words: store.words }, null, 2);
-            const body = {
-                message: `Admin update vocab (${store.lists.length} lists, ${store.words.length} words)`,
-                content: utf8ToBase64(contentStr),
-                branch: GITHUB_BRANCH
-            };
-            if (sha) body.sha = sha;
-
-            const putRes = await fetch(apiUrl, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify(body)
-            });
-            if (!putRes.ok) {
-                const err = await putRes.json().catch(() => ({}));
-                throw new Error(err.message || `推送失败 (${putRes.status})`);
-            }
-            localStorage.removeItem(DIRTY_KEY);
-            return { success: true };
+            setSessionUsername(null);
+            return { success: true, logged_in: false, message: '已退出登录' };
         }
     },
     vocab: {
         async getLists() {
-            if (!initialCloudSyncDone && localStorage.getItem(DIRTY_KEY) !== '1') {
-                initialCloudSyncDone = true;
-                await API.cloud.syncFromCloud(true);
-            }
-            const store = loadStore();
+            const store = loadUserStore();
             const counts = {};
             for (const w of store.words) {
                 counts[w.list_id] = (counts[w.list_id] || 0) + 1;
@@ -601,10 +694,9 @@ const API = {
             return { success: true, lists };
         },
         async createList(name, description = '') {
-            requireAdmin();
             const cleanName = (name || '').trim();
             if (!cleanName) throw new Error('词库名称不能为空');
-            const store = loadStore();
+            const store = loadUserStore();
             const maxOrder = store.lists.reduce((m, l) => Math.max(m, l.sort_order || 0), 0);
             const id = nextId(store.lists);
             store.lists.push({
@@ -614,32 +706,30 @@ const API = {
                 sort_order: maxOrder + 1,
                 created_at: new Date().toISOString()
             });
-            saveStore(store, true);
+            await saveUserStore(store);
             return { success: true, list_id: id, message: '词库创建成功' };
         },
         async deleteList(listId) {
-            requireAdmin();
-            const store = loadStore();
+            const store = loadUserStore();
             const before = store.lists.length;
             store.lists = store.lists.filter(l => l.id !== Number(listId));
             store.words = store.words.filter(w => w.list_id !== Number(listId));
-            saveStore(store, true);
             if (store.lists.length === before) throw new Error('删除失败或词库不存在');
+            await saveUserStore(store);
             return { success: true, message: '词库已删除' };
         },
         async getWords(listId) {
-            const store = loadStore();
+            const store = loadUserStore();
             const words = store.words
                 .filter(w => w.list_id === Number(listId))
                 .sort((a, b) => a.id - b.id);
             return { success: true, words };
         },
         async addWord(listId, data) {
-            requireAdmin();
             const word = (data.word || '').trim();
             const meaning = (data.meaning || '').trim();
             if (!word || !meaning) throw new Error('英文单词和中文释义均不能为空');
-            const store = loadStore();
+            const store = loadUserStore();
             const id = nextId(store.words);
             store.words.push({
                 id,
@@ -654,16 +744,15 @@ const API = {
                 mastered: 0,
                 created_at: new Date().toISOString()
             });
-            saveStore(store, true);
+            await saveUserStore(store);
             return { success: true, word_id: id, message: '单词添加成功' };
         },
         async batchAddWords(listId, text) {
-            requireAdmin();
             const parsed = [];
             for (const rawLine of (text || '').trim().split('\n')) {
                 const line = rawLine.trim();
                 if (!line) continue;
-                let parts = line.split(/[\t,：:\-—]+|\s{2,}/);
+                const parts = line.split(/[\t,：:\-—]+|\s{2,}/);
                 let w = '';
                 let m = '';
                 if (parts.length >= 2) {
@@ -679,7 +768,7 @@ const API = {
                 if (w && m) parsed.push({ word: w, meaning: m });
             }
             if (!parsed.length) throw new Error('未解析到有效的单词内容，请检查格式');
-            const store = loadStore();
+            const store = loadUserStore();
             let id = nextId(store.words);
             for (const item of parsed) {
                 store.words.push({
@@ -696,23 +785,22 @@ const API = {
                     created_at: new Date().toISOString()
                 });
             }
-            saveStore(store, true);
+            await saveUserStore(store);
             return { success: true, added_count: parsed.length, message: `成功录入 ${parsed.length} 个单词！` };
         },
         async deleteWord(wordId) {
-            requireAdmin();
-            const store = loadStore();
+            const store = loadUserStore();
             const before = store.words.length;
             store.words = store.words.filter(w => w.id !== Number(wordId));
-            saveStore(store, true);
             if (store.words.length === before) throw new Error('删除失败');
+            await saveUserStore(store);
             return { success: true, message: '单词已删除' };
         }
     },
     quiz: {
         async start(listId) {
             if (!listId) throw new Error('请选择要训练的词库');
-            const store = loadStore();
+            const store = loadUserStore();
             const words = store.words.filter(w => w.list_id === Number(listId));
             if (!words.length) throw new Error('当前词库暂无单词，请先录入或导入单词！');
             const questions = generateQuizRound(words, store.words);
@@ -720,7 +808,7 @@ const API = {
         },
         async submitAnswer(wordId, isCorrect) {
             if (wordId) {
-                const store = loadStore();
+                const store = loadUserStore();
                 const target = store.words.find(w => w.id === Number(wordId));
                 if (target) {
                     if (isCorrect) {
@@ -730,7 +818,7 @@ const API = {
                         target.wrong_count = (target.wrong_count || 0) + 1;
                         target.mastered = 0;
                     }
-                    saveStore(store);
+                    await saveUserStore(store);
                 }
             }
             return { success: true, is_correct: Boolean(isCorrect) };
@@ -753,7 +841,7 @@ const API = {
         },
         async nextRound(roundNumber, mistakeWords, listId) {
             if (!mistakeWords || !mistakeWords.length) throw new Error('没有需要强化的错词');
-            const store = loadStore();
+            const store = loadUserStore();
             const wordsById = new Map(store.words.map(w => [w.id, w]));
 
             const seen = new Set();

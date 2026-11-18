@@ -12,6 +12,7 @@ async function fetchJson(endpoint, options = {}) {
         ...defaultHeaders,
         ...(options.headers || {})
     };
+    options.credentials = 'same-origin';
 
     const response = await fetch(`${API_BASE}${endpoint}`, options);
     const data = await response.json().catch(() => ({}));
@@ -30,7 +31,7 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let icon = '<i class="fa-solid fa-circle-info"></i>';
     if (type === 'success') icon = '<i class="fa-solid fa-check"></i>';
     if (type === 'error') icon = '<i class="fa-solid fa-xmark"></i>';
@@ -77,8 +78,8 @@ class SoundEngine {
             gain.connect(this.ctx.destination);
 
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(587.33, now); // D5
-            osc.frequency.setValueAtTime(880, now + 0.08); // A5
+            osc.frequency.setValueAtTime(587.33, now);
+            osc.frequency.setValueAtTime(880, now + 0.08);
 
             gain.gain.setValueAtTime(0.12, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
@@ -114,18 +115,24 @@ class SoundEngine {
 const sounds = new SoundEngine();
 
 const API = {
-    admin: {
+    auth: {
         async status() {
-            return await fetchJson('/admin/status');
+            return await fetchJson('/auth/status');
         },
         async login(username, password) {
-            return await fetchJson('/admin/login', {
+            return await fetchJson('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password })
             });
         },
+        async register(username, password, email = '') {
+            return await fetchJson('/auth/register', {
+                method: 'POST',
+                body: JSON.stringify({ username, password, email })
+            });
+        },
         async logout() {
-            return await fetchJson('/admin/logout', { method: 'POST' });
+            return await fetchJson('/auth/logout', { method: 'POST' });
         }
     },
     vocab: {

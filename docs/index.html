@@ -23,7 +23,7 @@
                     </div>
                 </div>
 
-                <nav class="nav-segment">
+                <nav class="nav-segment" id="mainNav" style="display: none;">
                     <button class="segment-btn active" data-tab="vocab">
                         <i class="fa-solid fa-book-open"></i> 词汇清单
                     </button>
@@ -32,14 +32,68 @@
                     </button>
                 </nav>
 
-                <button class="btn btn-secondary btn-sm" id="btnAdminAuth" title="管理员登录以修改词库">
-                    <i class="fa-solid fa-lock"></i> <span id="adminAuthText">管理员登录</span>
-                </button>
+                <div id="userHeaderBox" style="display: none; align-items: center; gap: 10px;">
+                    <span class="count-pill"><i class="fa-solid fa-user"></i> <strong id="currentUsernameText"></strong></span>
+                    <button class="btn btn-secondary btn-sm" id="btnLogout">
+                        <i class="fa-solid fa-right-from-bracket"></i> 退出登录
+                    </button>
+                </div>
             </div>
         </header>
 
+        <!-- Mandatory Auth Gate -->
+        <section id="authGate" style="max-width: 440px; width: 100%; margin: 3.5rem auto; padding: 0 1rem;">
+            <div class="content-card" style="padding: 1.75rem;">
+                <div style="text-align: center; margin-bottom: 1.25rem;">
+                    <h2 style="margin-bottom: 0.35rem;">欢迎使用 EC 词汇研习</h2>
+                    <p class="subtitle">请登录或注册账号，您的词库与修改将按账号独立保存</p>
+                </div>
+
+                <div class="nav-segment" style="width: 100%; margin-bottom: 1.25rem;">
+                    <button type="button" class="segment-btn active" id="tabBtnLogin" style="flex: 1; justify-content: center;">
+                        登录已有账号
+                    </button>
+                    <button type="button" class="segment-btn" id="tabBtnRegister" style="flex: 1; justify-content: center;">
+                        注册新账号
+                    </button>
+                </div>
+
+                <form id="formLogin" class="form-compact">
+                    <div class="field-group">
+                        <label>用户名或邮箱</label>
+                        <input type="text" id="loginUsername" class="form-input" placeholder="输入用户名或邮箱" required autocomplete="username">
+                    </div>
+                    <div class="field-group">
+                        <label>密码</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="输入密码" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
+                        登录进入词库
+                    </button>
+                </form>
+
+                <form id="formRegister" class="form-compact" style="display: none;">
+                    <div class="field-group">
+                        <label>用户名</label>
+                        <input type="text" id="regUsername" class="form-input" placeholder="至少 2 个字符" required autocomplete="username">
+                    </div>
+                    <div class="field-group">
+                        <label>邮箱 (选填)</label>
+                        <input type="email" id="regEmail" class="form-input" placeholder="name@example.com" autocomplete="email">
+                    </div>
+                    <div class="field-group">
+                        <label>设置密码</label>
+                        <input type="password" id="regPassword" class="form-input" placeholder="至少 4 个字符" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
+                        注册并登录
+                    </button>
+                </form>
+            </div>
+        </section>
+
         <!-- Main Workspace -->
-        <main class="main-container">
+        <main class="main-container" id="mainWorkspace" style="display: none;">
             <!-- TAB 1: 词汇库管理 (Vocabulary Management) -->
             <section id="tabVocab" class="view-panel active">
                 <div class="panel-header">
@@ -48,28 +102,11 @@
                         <p class="subtitle">浏览已收录词汇、管理学习单元或录入新单词。</p>
                     </div>
                     <div class="header-right">
-                        <button class="btn btn-secondary admin-only" id="btnNewListModal" style="display: none;">
+                        <button class="btn btn-secondary" id="btnNewListModal">
                             <i class="fa-solid fa-plus"></i> 新建单元
                         </button>
                         <button class="btn btn-primary" id="btnStartPracticeTop">
                             <i class="fa-solid fa-play"></i> 开始本单元训练
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Admin Cloud Sync Bar (GitHub Pages Cross-Device Sync) -->
-                <div class="toolbar-card admin-only" id="adminCloudBar" style="display: none; flex-wrap: wrap; gap: 10px;">
-                    <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:240px;">
-                        <i class="fa-solid fa-cloud"></i>
-                        <span style="font-weight:600; white-space:nowrap;">??????:</span>
-                        <input type="password" id="githubTokenInput" class="form-input" style="max-width:280px;" placeholder="?? GitHub Token (?????????)">
-                    </div>
-                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnSyncFromCloud">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> ?????
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnSyncToCloud">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> ???????
                         </button>
                     </div>
                 </div>
@@ -82,14 +119,14 @@
                     </div>
                     <div class="toolbar-meta">
                         <span class="count-pill">收录 <strong id="listWordCount">0</strong> 词</span>
-                        <button class="btn-text-danger admin-only" id="btnDeleteList" title="删除当前单元" style="display: none;">
+                        <button class="btn-text-danger" id="btnDeleteList" title="删除当前单元">
                             <i class="fa-regular fa-trash-can"></i> 删除单元
                         </button>
                     </div>
                 </div>
 
                 <!-- Word Input Accordion / Drawers -->
-                <div class="input-grid admin-only" style="display: none;">
+                <div class="input-grid">
                     <!-- Single Word Entry -->
                     <div class="content-card">
                         <div class="card-head">
@@ -380,36 +417,13 @@ dialogue 对话，对白"></textarea>
             </div>
         </div>
 
-        <!-- Admin Login Modal -->
-        <div class="modal-overlay" id="adminLoginModal" style="display: none;">
-            <div class="modal-dialog">
-                <div class="modal-title-row">
-                    <h3>管理员登录</h3>
-                    <button class="btn-close" id="btnCloseAdminModal">&times;</button>
-                </div>
-                <form id="formAdminLogin">
-                    <div class="field-group">
-                        <label>管理员账号</label>
-                        <input type="text" id="adminUsernameInput" class="form-input" placeholder="输入管理员账号" required autocomplete="username">
-                    </div>
-                    <div class="field-group">
-                        <label>密码</label>
-                        <input type="password" id="adminPasswordInput" class="form-input" placeholder="输入管理员密码" required autocomplete="current-password">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="btnCancelAdminModal">取消</button>
-                        <button type="submit" class="btn btn-primary">登录</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <!-- Global Toast Notifications -->
         <div class="toast-stack" id="toastContainer"></div>
     </div>
 
     <!-- Scripts -->
     <script src="./js/seed_data.js"></script>
+    <script src="./js/cloud_config.js"></script>
     <script src="./js/api.js"></script>
     <script src="./js/vocab.js"></script>
     <script src="./js/quiz.js"></script>
