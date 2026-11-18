@@ -24,11 +24,17 @@
                 </div>
 
                 <nav class="nav-segment" id="mainNav" style="display: none;">
-                    <button class="segment-btn active" data-tab="vocab">
+                    <button class="segment-btn active" data-mode="portal">
+                        <i class="fa-solid fa-house"></i> 首页
+                    </button>
+                    <button class="segment-btn" data-mode="vocab" data-tab="vocab">
                         <i class="fa-solid fa-book-open"></i> 词汇清单
                     </button>
-                    <button class="segment-btn" data-tab="quiz">
-                        <i class="fa-solid fa-pen-to-square"></i> 情境训练
+                    <button class="segment-btn" data-mode="vocab" data-tab="quiz">
+                        <i class="fa-solid fa-pen-to-square"></i> 词汇训练
+                    </button>
+                    <button class="segment-btn" data-mode="grammar">
+                        <i class="fa-solid fa-diagram-project"></i> 语法 Packet 4
                     </button>
                 </nav>
 
@@ -94,6 +100,30 @@
 
         <!-- Main Workspace -->
         <main class="main-container" id="mainWorkspace" style="display: none;">
+            <!-- Entry Mode Portal -->
+            <section id="modePortal" class="portal-wrap">
+                <div class="portal-hero">
+                    <h2>选择学习模块</h2>
+                    <p class="subtitle">进入现有词汇研习系统，或开启 Packet 4（Unit 14 定语从句）语法微课与双题型特训</p>
+                </div>
+                <div class="portal-grid">
+                    <div class="portal-card" id="portalBtnVocab">
+                        <div class="portal-icon"><i class="fa-solid fa-book-open"></i></div>
+                        <h3>词汇研习 (Vocabulary Studio)</h3>
+                        <p>管理您的独立词库单元（Packet 1–3 + 逻辑谬误）、进行情境盲测、生成错词强化故事与循环加词挑战。</p>
+                        <span class="portal-cta">进入词汇模块 <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                    <div class="portal-card" id="portalBtnGrammar">
+                        <div class="portal-icon grammar"><i class="fa-solid fa-diagram-project"></i></div>
+                        <h3>语法特训 (Grammar · Packet 4)</h3>
+                        <p>梳理 Unit 14 定语从句 6 大核心知识点：Quick Reminder 动态微视频、多项对比选择与合并写句双题型、错题思维导图与视频讲解。</p>
+                        <span class="portal-cta">进入语法模块 <i class="fa-solid fa-arrow-right"></i></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vocab Workspace Wrapper -->
+            <div id="vocabWorkspace" style="display: none;">
             <!-- TAB 1: 词汇库管理 (Vocabulary Management) -->
             <section id="tabVocab" class="view-panel active">
                 <div class="panel-header">
@@ -391,7 +421,206 @@ dialogue 对话，对白"></textarea>
                     </div>
                 </div>
             </section>
+            </div>
+
+            <!-- Grammar Workspace Wrapper (Packet 4) -->
+            <div id="grammarWorkspace" style="display: none;">
+                <!-- Grammar Hub: Knowledge Point Selector -->
+                <section id="grammarHub">
+                    <div class="panel-header">
+                        <div class="header-left">
+                            <h2>Packet 4 · Unit 14 定语从句 (Adjective Clauses)</h2>
+                            <p class="subtitle">选择一个知识点先看 Quick Reminder 微视频，再做 5–8 道双题型真题；错题将自动生成思维导图与视频讲解。</p>
+                        </div>
+                    </div>
+                    <div class="grammar-topics-grid" id="grammarTopicsGrid"></div>
+                </section>
+
+                <!-- Quick Reminder Video View -->
+                <section id="grammarVideoView" style="display: none;">
+                    <div class="panel-header">
+                        <div class="header-left">
+                            <h2>Quick Reminder 微视频提醒</h2>
+                            <p class="subtitle">快速梳理该知识点的核心结构与“BE CAREFUL!”高频雷区</p>
+                        </div>
+                        <div class="header-right">
+                            <button type="button" class="btn btn-secondary" id="btnGrammarBackFromVideo">
+                                <i class="fa-solid fa-arrow-left"></i> 返回知识点列表
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btnGrammarStartPractice">
+                                <i class="fa-solid fa-pen-to-square"></i> 进入练习题
+                            </button>
+                        </div>
+                    </div>
+                    <div id="gQuickVideoMount"></div>
+                </section>
+
+                <!-- Grammar Practice Arena -->
+                <section id="grammarQuizView" style="display: none;">
+                    <div class="quiz-status-bar">
+                        <div class="round-meta">
+                            <span class="round-tag" id="gQuizTopicBadge">Packet 4</span>
+                            <span class="round-sub" id="gQuizModeTag">标准练习模式</span>
+                        </div>
+                        <div class="progress-wrap">
+                            <div class="progress-labels">
+                                <span>进度：<b id="gQCurrent">1</b> / <b id="gQTotal">5</b></span>
+                                <span>本轮错题：<b id="gQMistakeCount" class="text-error">0</b></span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-track" id="gQProgressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnGrammarExitQuiz">退出</button>
+                    </div>
+
+                    <div class="question-paper">
+                        <div class="question-meta-row">
+                            <span class="domain-tag" id="gQSourceTag">Packet 4</span>
+                            <span class="type-hint" id="gQTypeTag">多项对比选择</span>
+                        </div>
+
+                        <div class="question-prompt" id="gQPrompt" style="font-size: 1.05rem; font-weight: 600; margin-bottom: 0.85rem;"></div>
+
+                        <!-- Type 1: Multi-Select (B8) -->
+                        <div id="gMultiContainer" style="display: none;">
+                            <div class="g-multi-sentence" id="gMultiSentence"></div>
+                            <div class="g-multi-options" id="gMultiOptions"></div>
+                        </div>
+
+                        <!-- Type 2: Combine Sentences (Page 10 / B6) -->
+                        <div id="gCombineContainer" style="display: none;">
+                            <div class="g-combine-sources" id="gCombineSources"></div>
+                            <div class="field-group">
+                                <label>请输入合并后的完整英文句子：</label>
+                                <textarea id="gCombineInput" class="form-textarea" rows="2" placeholder="输入含定语从句的合并句子，例如：The professor who teaches Russian emailed me."></textarea>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; margin-top: 0.75rem;">
+                            <button type="button" class="btn btn-primary" id="btnGrammarSubmit">提交本题</button>
+                            <button type="button" class="btn btn-secondary" id="btnGrammarNext" style="display: none;">下一题 &rarr;</button>
+                            <button type="button" class="btn-hint" id="btnGrammarHint">
+                                <i class="fa-regular fa-lightbulb"></i> 查看语法提示
+                            </button>
+                        </div>
+
+                        <div class="scenario-chinese" id="gHintBox" style="display: none; margin-top: 0.75rem;"></div>
+
+                        <div class="feedback-card" id="gFeedbackBanner" style="display: none; margin-top: 1rem;">
+                            <div class="feedback-text" id="gFeedbackContent"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Grammar Results + Accuracy + Mind Maps + Redo Mistakes -->
+                <section id="grammarResultView" style="display: none;">
+                    <div class="result-panel">
+                        <div class="result-summary">
+                            <h2 id="gResultTitle">训练完成</h2>
+                            <p class="subtitle" id="gResultSub"></p>
+                        </div>
+
+                        <div class="metric-row">
+                            <div class="metric-item">
+                                <span class="metric-title">总题数</span>
+                                <span class="metric-num" id="gResTotal">0</span>
+                            </div>
+                            <div class="metric-item metric-correct">
+                                <span class="metric-title">答对</span>
+                                <span class="metric-num" id="gResCorrect">0</span>
+                            </div>
+                            <div class="metric-item metric-error">
+                                <span class="metric-title">错题</span>
+                                <span class="metric-num" id="gResMistakes">0</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-title">正确率</span>
+                                <span class="metric-num" id="gResAccuracy">0%</span>
+                            </div>
+                        </div>
+
+                        <div id="gMistakeAnalysisSection" style="display: none;">
+                            <div class="sub-heading" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+                                <h3><i class="fa-solid fa-diagram-project"></i> 错题思维导图与视频讲解</h3>
+                                <div style="display:flex; gap:0.5rem;">
+                                    <button type="button" class="btn btn-primary" id="btnGrammarRedoMistakes">
+                                        <i class="fa-solid fa-rotate-right"></i> 做错题（重做本轮错题）
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="gMistakeCards"></div>
+                        </div>
+
+                        <div class="victory-panel" id="gVictorySection" style="display: none;">
+                            <div class="victory-card">
+                                <div class="victory-mark">&#10003;</div>
+                                <h2>全部掌握通关！</h2>
+                                <p>本知识点所有语法题均已 100% 答对。</p>
+                            </div>
+                        </div>
+
+                        <div class="action-row" style="margin-top: 1.25rem;">
+                            <button type="button" class="btn btn-secondary" id="btnGrammarBackHub">返回 Packet 4 知识点列表</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
+
+        <!-- Reusable Animated Video Player Shell -->
+        <div style="display: none;">
+            <div class="g-video-shell" id="gVideoPlayerShell">
+                <div class="g-video-topbar">
+                    <div class="g-video-title">
+                        <i class="fa-solid fa-film"></i>
+                        <span id="gVideoTitle">Quick Reminder</span>
+                        <span style="opacity:0.65; font-size:0.8rem;" id="gVideoStepText">1 / 1</span>
+                    </div>
+                    <div class="g-video-dots" id="gVideoDots"></div>
+                </div>
+                <div class="g-video-stage">
+                    <div class="g-video-stage-body" id="gVideoStageBody">
+                        <div class="g-scene-slide">
+                            <span class="g-scene-badge" id="gVideoSceneBadge">Scene 1</span>
+                            <h3 class="g-scene-title" id="gVideoSceneTitle"></h3>
+                            <div class="g-scene-boxes">
+                                <div class="g-scene-card" id="gVideoLeftLine"></div>
+                                <div class="g-scene-card" id="gVideoRightLine"></div>
+                            </div>
+                            <div class="g-scene-result" id="gVideoResultLine"></div>
+                            <div class="g-scene-footer">
+                                <span id="gVideoCnTip"></span>
+                                <span class="g-rule-pill" id="gVideoRulePill"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="g-video-progress-track">
+                    <div class="g-video-progress-fill" id="gVideoProgressFill"></div>
+                </div>
+                <div class="g-video-controls">
+                    <div class="g-video-ctrl-group">
+                        <button type="button" class="g-ctrl-btn" id="gVideoPlayBtn"><i class="fa-solid fa-pause"></i> 暂停</button>
+                        <button type="button" class="g-ctrl-btn" id="gVideoRestartBtn"><i class="fa-solid fa-rotate-left"></i> 重播</button>
+                        <button type="button" class="g-ctrl-btn" id="gVideoPrevBtn"><i class="fa-solid fa-backward-step"></i> 上一幕</button>
+                        <button type="button" class="g-ctrl-btn" id="gVideoNextBtn"><i class="fa-solid fa-forward-step"></i> 下一幕</button>
+                    </div>
+                    <button type="button" class="g-ctrl-btn" id="gVideoVoiceBtn"><i class="fa-solid fa-volume-xmark"></i> 语音讲解: 关</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mistake Video Explanation Modal -->
+        <div class="modal-overlay" id="mistakeVideoModal" style="display: none;">
+            <div class="modal-dialog" style="max-width: 780px; width: 95%;">
+                <div class="modal-title-row">
+                    <h3>错题视频讲解</h3>
+                    <button type="button" class="btn-close" id="btnCloseMistakeVideo">&times;</button>
+                </div>
+                <div id="gMistakeVideoMount"></div>
+            </div>
+        </div>
 
         <!-- New List Modal -->
         <div class="modal-overlay" id="newListModal" style="display: none;">
@@ -425,6 +654,8 @@ dialogue 对话，对白"></textarea>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/vocab.js"></script>
     <script src="/static/js/quiz.js"></script>
+    <script src="/static/js/grammar_data.js"></script>
+    <script src="/static/js/grammar.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 </html>

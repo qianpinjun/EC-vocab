@@ -1,12 +1,62 @@
-// Main Application Coordinator with Mandatory User Login Gate
+// Main Application Coordinator: Auth Gate -> Entry Mode Portal -> Vocab Studio / Grammar Studio
 
 document.addEventListener('DOMContentLoaded', async () => {
     initTabs();
+    initPortal();
     VocabModule.init();
     QuizModule.init();
+    if (window.GrammarModule) GrammarModule.init();
     initAuth();
     await checkAuthAndBoot();
 });
+
+function switchMode(mode, subTab = 'vocab') {
+    const portal = document.getElementById('modePortal');
+    const vocabWs = document.getElementById('vocabWorkspace');
+    const grammarWs = document.getElementById('grammarWorkspace');
+    const navButtons = document.querySelectorAll('#mainNav .segment-btn');
+
+    if (mode !== 'grammar' && window.GrammarVideoPlayer) {
+        GrammarVideoPlayer.stop();
+    }
+
+    if (portal) portal.style.display = mode === 'portal' ? 'block' : 'none';
+    if (vocabWs) vocabWs.style.display = mode === 'vocab' ? 'block' : 'none';
+    if (grammarWs) grammarWs.style.display = mode === 'grammar' ? 'block' : 'none';
+
+    navButtons.forEach(b => {
+        const bMode = b.getAttribute('data-mode');
+        const bTab = b.getAttribute('data-tab');
+        if (mode === 'vocab') {
+            b.classList.toggle('active', bMode === 'vocab' && bTab === subTab);
+        } else {
+            b.classList.toggle('active', bMode === mode);
+        }
+    });
+
+    if (mode === 'vocab') {
+        const panes = document.querySelectorAll('#vocabWorkspace .view-panel');
+        panes.forEach(p => p.classList.remove('active'));
+        const targetPane = document.getElementById(`tab${subTab.charAt(0).toUpperCase() + subTab.slice(1)}`);
+        if (targetPane) targetPane.classList.add('active');
+        if (subTab === 'vocab') {
+            VocabModule.loadLists();
+        }
+    } else if (mode === 'grammar' && window.GrammarModule) {
+        GrammarModule.resetToHub();
+    }
+}
+
+function initPortal() {
+    const btnVocab = document.getElementById('portalBtnVocab');
+    const btnGrammar = document.getElementById('portalBtnGrammar');
+    if (btnVocab) {
+        btnVocab.addEventListener('click', () => switchMode('vocab', 'vocab'));
+    }
+    if (btnGrammar) {
+        btnGrammar.addEventListener('click', () => switchMode('grammar'));
+    }
+}
 
 function setAuthenticatedUI(user) {
     const authGate = document.getElementById('authGate');
@@ -21,6 +71,7 @@ function setAuthenticatedUI(user) {
         if (userHeaderBox) userHeaderBox.style.display = 'flex';
         if (mainWorkspace) mainWorkspace.style.display = 'block';
         if (usernameText) usernameText.textContent = user.username;
+        switchMode('portal');
     } else {
         if (authGate) authGate.style.display = 'block';
         if (mainNav) mainNav.style.display = 'none';
@@ -109,6 +160,7 @@ function initAuth() {
                 clearTimeout(QuizModule.autoNextTimer);
                 QuizModule.autoNextTimer = null;
             }
+            if (window.GrammarVideoPlayer) GrammarVideoPlayer.stop();
             VocabModule.reset();
             const startCard = document.getElementById('quizStartCard');
             const arena = document.getElementById('quizArena');
@@ -125,22 +177,11 @@ function initAuth() {
 // Segmented Navigation Switcher
 function initTabs() {
     const navButtons = document.querySelectorAll('#mainNav .segment-btn');
-    const panes = document.querySelectorAll('.view-panel');
-
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            const tabName = btn.getAttribute('data-tab');
-
-            navButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            panes.forEach(p => p.classList.remove('active'));
-            const targetPane = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
-            if (targetPane) targetPane.classList.add('active');
-
-            if (tabName === 'vocab') {
-                VocabModule.loadLists();
-            }
+            const mode = btn.getAttribute('data-mode') || 'vocab';
+            const tabName = btn.getAttribute('data-tab') || 'vocab';
+            switchMode(mode, tabName);
         });
     });
 }
