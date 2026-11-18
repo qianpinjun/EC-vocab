@@ -1,125 +1,104 @@
-# EC 单词奇旅 (EC Vocabulary Adventure)
+# EC Vocabulary & Grammar Studio (EC 词汇与语法情境研习系统)
 
-一款融合**真实情境选择题**、**错词去重脑洞小故事**与**电子小狗养成**的背单词系统。支持多用户登录、实时录入/批量粘贴单词、自适应惩罚循环闯关以及全服在线天梯排行榜。
+一款面向 EC 课程体系的**双模块英语学习 Web 应用**，整合了**多用户独立词库与情境闯关**、**词性匹配的错词脑洞小故事**，以及 **Packet 4（Unit 14 定语从句）微视频讲解与双题型语法特训**。
+
+- 🌐 **在线访问（GitHub Pages）：** `https://qianpinjun.github.io/EC-vocab/`
 
 ---
 
 ## 🌟 核心功能一览
 
-1. **账户系统**：
-   - 邮箱与用户名注册（注册即赠送 50 初始启动金币 + 专属小狗旺财 🐶）。
-   - 邮箱/用户名双通道安全登录与会话管理。
+### 1. 多用户账号与跨设备同步
+- 打开网页需先**登录或注册账号**，注册时自动分配全套基础词库（Packet 1–3 与逻辑谬误），每位用户的增删改查完全独立保存。
+- **本地/服务端模式**：通过 Flask + SQLite (`data/ec_words.db`) 持久化存储。
+- **GitHub Pages 静态模式 (`docs/`)**：结合 Supabase (`docs/js/cloud_config.js`) 实现跨设备、跨浏览器同步；同一账号在电脑或手机登录均可读取最新修改的词库。
 
-2. **词汇库与实时录入（先放空，随时填入）**：
-   - 初始词库完全留白，静待您录入专属词汇。
-   - **实时单条录入**：输入英文单词、中文释义，系统自动分配情境。
-   - **批量文本导入**：支持一行一个单词或直接粘贴（`单词 释义` / `单词 - 释义` / 制表符）。
-   - 提供便捷的“载入6个测试情境词”按键，方便立即体验。
+### 2. 词汇研习模块 (Vocabulary Studio)
+- **单元管理与录入**：内置 Packet 1–3 核心词库（Vocabulary Workshop、Intensive Reading、逻辑谬误等），支持新建/删除单元、单条录入、批量粘贴导入及实时搜索。
+- **第 1 轮情境盲测**：基于真实语境或动态场景生成四选一题目，配合 Web Audio 合成声效。
+- **词性匹配脑洞小故事**：第 1 轮结束后对错词去重，依据词性与固定搭配规则（如 `verb_person`、`prep_verb`、`infinitive_to`、`adj_pred` 等）自然嵌入荒诞双语小故事，支持一键朗读与复制。
+- **惩罚强化循环**：第 2 轮起**每错 1 个词自动追加 2 个随机词汇**，循环练习直至 100% 全对通关。
 
-3. **第 1 轮：全量情境选择题考查**：
-   - 将词库中所有单词以情境选择题（完形填空/真实场景）考查一遍。
-   - 四选一情境题目，包含即时声效反馈（Web Audio 纯合成无外部音频依赖）。
-
-4. **错题统计与详细核对表**：
-   - 自动收录考查词汇、实际正确释义、用户选错的干扰项以及当时题目语境。
-
-5. **错词去重与超级离谱小故事**：
-   - 自动对本轮所有错词进行唯一性去重。
-   - 智能生成情节荒诞离奇的专属小故事（如赛博旺财星际奶茶危机、维多利亚鸭爵士大逃亡等）。
-   - 故事中完整融入全部错词，并以高亮双语标签（英文 + 中文释义）展示，支持 Web Speech 一键语音朗读与复制。
-
-6. **后续轮次强化与惩罚机制（直到全对）**：
-   - 后续轮次不再重复生成故事。
-   - **惩罚加词规则**：每一轮做题，**每错一个词在下一轮自动追加两个随机生词**（来自词库或高频挑战词池）。
-   - 循环强化挑战，**一直练习直到全对（0 错误）**！
-   - 全对时触发**全屏烟花庆典**、胜利赞歌与 +100 丰厚金币大奖！
-
-7. **电子小狗系统（旺财）**：
-   - 纯 SVG 精致动态小柴犬，支持摇尾巴、喘气、眨眼、咀嚼进食等生动动画。
-   - 饱食度、快乐度与经验值系统。
-   - 金币补给商店：磨牙骨头 🦴、多汁牛排 🥩、高级冻干 🍗、互动飞盘 🎾、香波泡泡浴 🛁。
-   - 伴随等级提升解锁新称号（Lv.1 萌新柴犬 -> Lv.5 银河至尊神犬）。
-
-8. **在线天梯排行榜（服务器就绪）**：
-   - 支持多用户在线排名，依据累计掌握词数、小狗等级、金币储备进行全服竞技。
-   - 隐私脱敏展示（如 `u***@example.com`），底端固定高亮当前用户自身名次。
+### 3. 语法特训模块 (Grammar Studio · Packet 4 / Unit 14)
+- **6 大核心知识点 + 综合挑战**：
+  1. `01` 位置与基本结构（Placement & Dependent Clauses）
+  2. `02` 作主语的关系代词（`who / which / that`、主谓一致、禁止双主语）
+  3. `03` 作宾语与省略（`who(m) / which / that / Ø` 与介词前置 `to whom`）
+  4. `04` 所有格关系词（`whose + Noun`）
+  5. `05` 地点与时间（`where / when / in which / Ø` 及 `where` 作主语陷阱）
+  6. `06` 限定 vs 非限定从句（逗号规则与禁用 `that / Ø`）
+- **Quick Reminder 动态微视频**：每个知识点配备分幕动画讲解与高频雷区提示，支持播放控制与语音讲解。
+- **双题型练习**：
+  - **题型一（B8 多项对比选择）**：支持多选所有合法关系词，自动标注漏选、错选与正解。
+  - **题型二（合并写句题）**：支持多种等效答案判分，并针对双主语、逗号后误用 `that`、残留代词等提供即时诊断。
+- **错题思维导图与重做闭环**：统计本轮正确率，为每道错题自动生成**拆解思维导图**与**3 步视频精讲**，支持一键重做错题直到全部掌握。
 
 ---
 
-## 🚀 本地启动指南
+## 🚀 本地启动指南 (Flask + SQLite)
 
-1. **环境准备**：
-   - Python 3.10+（当前内置 Python 3.13）
-   - 安装依赖（已内置 Flask）：
-     ```bash
-     pip install -r requirements.txt
-     ```
+1. **安装依赖**（建议 Python 3.10+）：
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-2. **启动本地服务器**：
+2. **启动本地服务**：
    ```bash
    python app.py
    ```
 
-3. **浏览器访问**：
-   打开浏览器访问：`http://127.0.0.1:5000`
+3. **访问应用**：
+   打开浏览器访问 `http://127.0.0.1:5000`。
+
+> **生产部署提示：** 在生产环境中请设置环境变量 `DEBUG=False` 与强随机 `SECRET_KEY`，并通过 `gunicorn -w 4 -b 0.0.0.0:5000 app:app`（Linux）或 `waitress-serve`（Windows）运行。
 
 ---
 
-## 🌐 部署到云服务器（在线排行榜支持）
+## 🌐 GitHub Pages 静态版本 (`docs/`)
 
-由于本系统采用轻量可靠的 SQLite + RESTful API 架构，单文件数据库位于 `data/ec_words.db`，可极其方便地部署到任意 Linux 服务器（阿里云、腾讯云、华为云、AWS、VPS 等）：
-
-### 方式一：Gunicorn + Systemd（推荐生产部署）
-1. 在 Linux 服务器上安装 gunicorn：
-   ```bash
-   pip install gunicorn
-   ```
-2. 后台启动服务：
-   ```bash
-   gunicorn -w 4 -b 0.0.0.0:5000 app:app --daemon
-   ```
-3. 配合 Nginx 进行反向代理与绑定域名即可让全网用户访问并参与天梯榜！
-
-### 方式二：Docker 容器化部署
-编写简单的 Dockerfile 即可一键运行：
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY . .
-RUN pip install --no-cache-dir -r requirements.txt
-EXPOSE 5000
-CMD ["python", "app.py"]
-```
-运行容器：
-```bash
-docker build -t ec-words .
-docker run -d -p 5000:5000 -v $(pwd)/data:/app/data ec-words
-```
+`docs/` 目录为纯前端静态版本（可直接在 GitHub Pages 选择 `main` 分支的 `/docs` 目录部署）：
+- `docs/js/seed_data.js` & `docs/data/vocab.json`：内置初始词库数据。
+- `docs/js/cloud_config.js`：配置 Supabase URL 与公开 `anon` Key 以开启多设备账号与词库云同步。
 
 ---
 
 ## 📂 项目结构说明
 
-```
+```text
 d:\EC项目\
-├── app.py                 # Flask 主服务路由及 RESTful API 接口
-├── config.py              # 服务配置与路径管理
-├── database.py            # SQLite 数据库初始化与事务管理
-├── models.py              # 用户、词库、单词、错题集、宠物、天梯榜数据模型
-├── question_engine.py     # 情境选择题出题器与选项生成引擎
-├── story_engine.py        # 错词去重融合与超级离谱小故事生成引擎
+├── app.py                 # Flask 主服务路由、Session 认证及 RESTful API
+├── config.py              # 服务配置、数据库路径与环境变量读取
+├── database.py            # SQLite 初始化与连接管理
+├── models.py              # UserModel、VocabListModel、WordModel 数据模型
+├── question_engine.py     # 词汇情境盲测出题与挖空引擎
+├── story_engine.py        # 基于词性/搭配的错词融合脑洞故事生成引擎
 ├── requirements.txt       # Python 项目依赖
+├── Procfile               # Gunicorn 启动配置
 ├── README.md              # 项目文档说明
+├── data/
+│   └── ec_words.db        # SQLite 数据库文件
+├── templates/
+│   └── index.html         # Flask 单页面应用模板（登录门禁、入口主页、词汇与语法模块）
 ├── static/
-│   ├── css/
-│   │   └── style.css      # 现代扁平拟态样式、SVG小狗动画、答题反馈
+│   ├── css/style.css      # 全局样式、视频播放器动画、思维导图与卡片布局
 │   └── js/
-│       ├── api.js         # API 通信封装与 Web Audio 纯合成声效引擎
-│       ├── main.js        # 应用全局协调器与登录/注册弹窗交互
-│       ├── vocab.js       # 词库管理、单词实时录入与批量粘贴
-│       ├── quiz.js        # 情境闯关答题、错题核对、离谱故事与惩罚循环
-│       ├── pet.js         # 电子小狗动态渲染、好感饱食交互与投喂商店
-│       └── leaderboard.js # 全服在线天梯榜实时渲染与个人排名定位
-└── templates/
-    └── index.html         # 单页面 Web 应用程序核心模板
+│       ├── api.js         # Flask REST API 封装与 Web Audio 声效
+│       ├── main.js        # 认证门禁、模块切换与全局协调
+│       ├── vocab.js       # 词库管理、录入与搜索
+│       ├── quiz.js        # 词汇情境测试、故事展示与惩罚循环
+│       ├── grammar_data.js# Packet 4 知识点、微视频脚本、双题型题库与思维导图数据
+│       └── grammar.js     # 语法微视频播放器、多选/合句批改器与错题闭环
+└── docs/                  # GitHub Pages 静态部署目录（含 Supabase 云同步支持）
+    ├── index.html
+    ├── data/vocab.json
+    ├── css/style.css
+    └── js/
+        ├── seed_data.js
+        ├── cloud_config.js
+        ├── api.js
+        ├── main.js
+        ├── vocab.js
+        ├── quiz.js
+        ├── grammar_data.js
+        └── grammar.js
 ```
