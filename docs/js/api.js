@@ -436,69 +436,426 @@ function generateQuizRound(wordsToTest, allUserWords) {
 // ----------------- Story Engine -----------------
 const STORY_THEMES = [
     {
-        title: '柴犬旺财的星际奶茶危机 (Alien Milk Tea Crisis)',
-        intro_en: 'Deep in a top-secret pet laboratory, a cyber dog named Wangcai was trying to invent zero-gravity milk tea.',
-        intro_cn: '在一家绝密的宠物实验室深处，一只名叫“旺财”的赛博小狗正在试图发明零重力珍珠奶茶。',
-        templates: [
-            ['Suddenly, a flying robotic pigeon swooped into the microwave oven, demanding everyone to notice how {WORD_TAG} this entire operation was.',
-             '突然间，一只飞行机器鸽子俯冲进了微波炉，大声命令所有人注意眼前的这套操作是多么地{MEANING_TAG}。'],
-            ['Wangcai refused to surrender his secret tea recipe, claiming that galactic peace was strictly {WORD_TAG}.',
-             '旺财坚决不交出秘密奶茶配方，声称维护银河和平绝对是{MEANING_TAG}的。'],
-            ['The alien squirrel commander adjusted his golden sunglasses and tried to {WORD_TAG} the surrender conditions through telepathy.',
-             '外星松鼠指挥官扶了扶他的纯金墨镜，试图通过心灵感应来{MEANING_TAG}投降条件。'],
-            ['Just when tensions peaked, the laboratory toaster transformed into a spaceship, offering a surprisingly {WORD_TAG} escape plan.',
-             '就在气氛剑拔弩张时，实验室里的烤面包机突然变形为飞船，提出了一个令人惊奇的{MEANING_TAG}逃脱计划。'],
-            ['In order to calm the screaming crowd of guinea pigs, someone had to {WORD_TAG} a lullaby on a giant cheese flute.',
-             '为了安抚尖叫连连的豚鼠群，有人不得不拿着巨大的奶酪笛子来{MEANING_TAG}一首催眠曲。'],
-            ['At last, the whole galaxy agreed that treating boba pearls as currency was totally {WORD_TAG}.',
-             '最终，整个银河系达成共识，一致认为把珍珠波霸当成硬通货是绝对{MEANING_TAG}的。']
-        ],
-        ending_en: 'In the end, everyone sat down, enjoyed cold milk tea with dog biscuits, and promised never to microwave time machines again.',
-        ending_cn: '最后，所有人席地而坐，一边喝着冰奶茶吃着狗饼干，一边发誓再也不把时光机扔进微波炉里了。'
+        "title": "柴犬旺财的星际奶茶危机 (Alien Milk Tea Crisis)",
+        "intro_en": "Deep in a top-secret pet laboratory, a cyber dog named Wangcai was trying to invent zero-gravity milk tea.",
+        "intro_cn": "在一家绝密的宠物实验室深处，一只名叫“旺财”的赛博小狗正在试图发明零重力珍珠奶茶。",
+        "ending_en": "In the end, everyone sat down, enjoyed cold milk tea with dog biscuits, and promised never to microwave time machines again.",
+        "ending_cn": "最后，所有人席地而坐，一边喝着冰奶茶吃着狗饼干，一边发誓再也不把时光机扔进微波炉里了。"
     },
     {
-        title: "维多利亚时代鸭爵士的时空大逃亡 (Lord Duck's Victorian Time Slip)",
-        intro_en: 'In Victorian London of 1888, a posh duck wearing a golden monocle and a silk top hat accidentally activated a steam-powered toaster.',
-        intro_cn: '在1888年的维多利亚时代伦敦，一只戴着单片金丝眼镜和丝绸礼帽的贵族鸭爵士，不小心启动了一台蒸汽驱动的烤面包机。',
-        templates: [
-            ['Lord Duck inspected the foggy cobblestone street and quacked in a very {WORD_TAG} manner to his butler.',
-             '鸭爵士端详着大雾弥漫的鹅卵石街道，用一种极其{MEANING_TAG}的腔调对管家嘎嘎叫唤。'],
-            ['The Scotland Yard detectives arrived on tricycles, claiming the missing teacup was truly {WORD_TAG}.',
-             '苏格兰场的警探们骑着三轮车赶到现场，一口咬定失踪的英国茶杯其实是{MEANING_TAG}的。'],
-            ["Even the queen's royal corgi barked loudly, trying to {WORD_TAG} the diplomatic crisis over afternoon scones.",
-             '甚至女王的皇家柯基犬也大声吠叫，试图在享用下午茶司康饼时{MEANING_TAG}这场外交危机。'],
-            ['A suspicious street cat disguised as a chimney sweep offered a suspiciously {WORD_TAG} explanation for the floating cucumber.',
-             '一只伪装成扫烟囱工人的可疑野猫，对半空中漂浮的黄瓜给出了一个可疑又{MEANING_TAG}的解释。'],
-            ['To prove his noble lineage, Lord Duck had to {WORD_TAG} a classical waltz while balancing a teacup on his beak.',
-             '为了证明高贵血统，鸭爵士不得不一边在鸭嘴上平衡茶杯，一边{MEANING_TAG}一支古典华尔兹。'],
-            ['The crowd cheered when the steam engine exploded into purple confetti, proving that destiny was indeed {WORD_TAG}.',
-             '当蒸汽机轰然炸裂出满天紫色碎花时，全场欢呼雀跃，证明了命运确实是{MEANING_TAG}的。']
-        ],
-        ending_en: 'Lord Duck gracefully flew off on an umbrella, leaving Londoners forever puzzled by the mystery of the flying scones.',
-        ending_cn: '鸭爵士撑着雨伞优雅地乘风飞走，只给伦敦市民留下了一个关于“会飞的司康饼”的世纪未解之谜。'
+        "title": "维多利亚时代鸭爵士的时空大逃亡 (Lord Duck's Victorian Time Slip)",
+        "intro_en": "In Victorian London of 1888, a posh duck wearing a golden monocle and a silk top hat accidentally activated a steam-powered toaster.",
+        "intro_cn": "在1888年的维多利亚时代伦敦，一只戴着单片金丝眼镜和丝绸礼帽的贵族鸭爵士，不小心启动了一台蒸汽驱动的烤面包机。",
+        "ending_en": "Lord Duck gracefully flew off on an umbrella, leaving Londoners forever puzzled by the mystery of the flying scones.",
+        "ending_cn": "鸭爵士撑着雨伞优雅地乘风飞走，只给伦敦市民留下了一个关于“会飞的司康饼”的世纪未解之谜。"
     },
     {
-        title: '为了不上班，狂热程序员把键盘换成了胡萝卜 (The Carrot Keyboard Rebellion)',
-        intro_en: 'On a manic Monday morning at 9:00 AM, senior developer Leo discovered his computer keyboard had turned into seven crispy baby carrots.',
-        intro_cn: '在一个狂乱的周一早晨九点，高级程序员老张赫然发现自己的机械键盘变成了七根脆生生的小胡萝卜。',
-        templates: [
-            ['Every time he typed a semicolon, the carrot let out a sound so {WORD_TAG} that the entire engineering floor froze.',
-             '每当他敲下一个分号，胡萝卜就会发出一声如此{MEANING_TAG}的怪叫，吓得整个研发部员工瞬间石化。'],
-            ['The product manager rushed over, waving a 200-page PRD and demanding a {WORD_TAG} deadline for the carrot driver.',
-             '产品经理挥舞着200页的需求文档飞奔过来，严厉要求给胡萝卜驱动程序设定一个{MEANING_TAG}的上线期限。'],
-            ['Leo calmly sipped cold iced coffee and decided to {WORD_TAG} the absurd bug directly into company headquarters.',
-             '老张淡定地啜饮了一口冰美式，决定将这个荒谬的Bug直接{MEANING_TAG}到集团总部。'],
-            ['Suddenly, a pet golden retriever leaped onto the server rack, showing a remarkably {WORD_TAG} talent for Python debugging.',
-             '突然间，一只金毛寻回犬飞身跃上服务器机柜，展现出了惊人{MEANING_TAG}的Python代码调试天分。'],
-            ['The CTO immediately held an emergency all-hands meeting to {WORD_TAG} why carrots were outperforming senior engineers.',
-             'CTO火速召集全员紧急大会，严肃讨论并试图{MEANING_TAG}为什么胡萝卜的交付效率竟能超越资深工程师。'],
-            ['In the end, everyone agreed that replacing all monitors with fresh lettuce was exceptionally {WORD_TAG}.',
-             '最终大家全票通过，一致认为把所有电脑显示器都换成新鲜生菜是极其{MEANING_TAG}的做法。']
-        ],
-        ending_en: "From that day on, the tech company became the world's most profitable organic rabbit salad bar.",
-        ending_cn: '从那天起，这家科技巨头摇身一变，成为了全球利润最高、代码跑得最欢的有机兔子沙拉吧。'
+        "title": "为了不上班，狂热程序员把键盘换成了胡萝卜 (The Carrot Keyboard Rebellion)",
+        "intro_en": "On a manic Monday morning at 9:00 AM, senior developer Leo discovered his computer keyboard had turned into seven crispy baby carrots.",
+        "intro_cn": "在一个狂乱的周一早晨九点，高级程序员老张赫然发现自己的机械键盘变成了七根脆生生的小胡萝卜。",
+        "ending_en": "From that day on, the tech company became the world's most profitable organic rabbit salad bar.",
+        "ending_cn": "从那天起，这家科技巨头摇身一变，成为了全球利润最高、代码跑得最欢的有机兔子沙拉吧。"
     }
 ];
+
+const WORD_POS_MAP = {
+    "a class act": "noun_a_an",
+    "abstain": "verb_intrans",
+    "accelerate": "verb_plan",
+    "ad hominem": "noun_uncountable",
+    "adequate": "adj_thing",
+    "afterthought": "noun_countable",
+    "ajar": "adj_pred",
+    "assumption": "noun_countable",
+    "balance out": "verb_intrans",
+    "be beside oneself with": "be_emotion",
+    "be rife with": "be_rife",
+    "bellow": "verb_intrans",
+    "bellwether": "noun_countable",
+    "beneficiary": "noun_countable",
+    "blinkered": "adj_person",
+    "botch": "verb_plan",
+    "buoy": "verb_person",
+    "bystander": "noun_countable",
+    "canvass": "verb_person",
+    "casual": "adj_person",
+    "caustic": "adj_person",
+    "circumvent": "verb_plan",
+    "clutter": "verb_place",
+    "commune with": "prep_commune",
+    "comply": "verb_intrans",
+    "composure": "noun_uncountable",
+    "console": "verb_person",
+    "contrive": "verb_plan",
+    "deep pocket": "noun_countable",
+    "demure": "adj_person",
+    "detestable": "adj_thing",
+    "dialogue": "noun_uncountable",
+    "dilapidated": "adj_place",
+    "dismantle": "verb_plan",
+    "down": "adverb",
+    "downtrodden": "adj_person",
+    "draw the line": "verb_intrans",
+    "duplicity": "noun_uncountable",
+    "embargo": "noun_countable",
+    "emblem": "noun_countable",
+    "enterprising": "adj_person",
+    "entice": "verb_person",
+    "erode": "verb_plan",
+    "farce": "noun_countable",
+    "fling out": "verb_object",
+    "flounder": "verb_intrans",
+    "forte": "noun_countable",
+    "futile": "adj_thing",
+    "get bogged down": "verb_intrans",
+    "gigantic": "adj_place",
+    "graphic": "adj_thing",
+    "grueling": "adj_thing",
+    "gruesome": "adj_thing",
+    "guesstimate": "noun_countable",
+    "harbinger": "noun_countable",
+    "hasty generalization": "noun_countable",
+    "havoc": "noun_uncountable",
+    "hazard": "noun_countable",
+    "hearth": "noun_countable",
+    "horrid": "adj_thing",
+    "hospitable": "adj_person",
+    "implore": "verb_person",
+    "infamous": "adj_person",
+    "innumerable": "adj_plural",
+    "kernel": "noun_countable",
+    "lair": "noun_countable",
+    "lavish": "adj_thing",
+    "lax": "adj_person",
+    "left": "adverb",
+    "lionize": "verb_person",
+    "make a clean breast of": "prep_confess",
+    "mar": "verb_plan",
+    "mass merchandiser": "noun_countable",
+    "melancholy": "adj_person",
+    "mellifluous": "adj_voice",
+    "meticulously": "adverb",
+    "misdemeanor": "noun_countable",
+    "morbid": "adj_thing",
+    "mull": "verb_intrans",
+    "narrative": "noun_countable",
+    "nautical mile": "noun_countable",
+    "nepotism": "noun_uncountable",
+    "non-sequitur": "noun_countable",
+    "notorious": "adj_person",
+    "of one's own accord": "adverb",
+    "on the warpath": "adj_pred",
+    "ordeal": "noun_countable",
+    "overbearing": "adj_person",
+    "overture": "noun_countable",
+    "pact": "noun_countable",
+    "pamper": "verb_person",
+    "parasite": "noun_countable",
+    "parch": "verb_place",
+    "pawn shop": "noun_countable",
+    "persist": "verb_intrans",
+    "pester": "verb_person",
+    "pontificate": "verb_intrans",
+    "prescribed": "adj_thing",
+    "puny": "adj_place",
+    "quibble": "verb_intrans",
+    "ratify": "verb_plan",
+    "rationing": "noun_uncountable",
+    "red herring": "noun_countable",
+    "redouble": "verb_efforts",
+    "regal": "adj_place",
+    "resourceful": "adj_person",
+    "rife": "adj_pred",
+    "right": "adverb",
+    "scrimp": "verb_intrans",
+    "see the punishment through": "verb_intrans",
+    "shirk": "verb_plan",
+    "single out": "verb_person",
+    "sophisticated": "adj_thing",
+    "spare no trouble to": "infinitive_to",
+    "speak up for": "prep_verb",
+    "stalemate": "noun_countable",
+    "stifle": "verb_plan",
+    "strawman argument": "noun_countable",
+    "surplus": "noun_countable",
+    "timidity": "noun_uncountable",
+    "touch and go": "adj_pred",
+    "trifle with": "prep_verb",
+    "up": "adverb",
+    "upbraid": "verb_person",
+    "veto": "verb_plan",
+    "vindictive": "adj_person",
+    "visual display": "noun_countable",
+    "vital": "adj_thing",
+    "voracity": "noun_uncountable",
+    "ware": "noun_uncountable",
+    "well-meaning": "adj_person",
+    "wild guess": "noun_countable",
+    "wilt": "verb_intrans",
+    "with the highest intensity": "adverb",
+    "yellow-page": "noun_countable",
+    "zenith": "noun_countable",
+    "zero in on": "prep_verb"
+};
+
+const TEMPLATES_BY_POS = {
+    "infinitive_to": [
+        [
+            "The heroic chef promised to {WORD_TAG} protect the secret cheese formula from the hovering pigeon.",
+            "英勇的主厨当场立誓，一定会“{MEANING_TAG}”保护绝密奶酪配方不被盘旋的鸽子抢走。"
+        ],
+        [
+            "Despite the chaos, the team decided to {WORD_TAG} rescue the runaway toaster before midnight.",
+            "尽管现场一片混乱，团队还是决定“{MEANING_TAG}”去救回那台逃跑的烤面包机。"
+        ]
+    ],
+    "prep_confess": [
+        [
+            "Cornered by the talking pigeon, the suspect finally had to {WORD_TAG} the entire secret.",
+            "被会说话的鸽子逼到墙角后，嫌疑人最终不得不“{MEANING_TAG}”这桩惊天秘密。"
+        ]
+    ],
+    "prep_commune": [
+        [
+            "Under the glowing moonlight, the eccentric captain tried to {WORD_TAG} the ancient talking teapot.",
+            "在皎洁的月光下，古怪的船长试图“{MEANING_TAG}”那只古老的会说话茶壶。"
+        ]
+    ],
+    "be_emotion": [
+        [
+            "Watching the toaster launch into orbit, the stunned detective seemed to {WORD_TAG} pure disbelief.",
+            "眼看着烤面包机发射升空，惊呆的侦探简直“{MEANING_TAG}”。"
+        ]
+    ],
+    "be_rife": [
+        [
+            "Before long, the entire headquarters seemed to {WORD_TAG} wild rumors and floating teacups.",
+            "没过多久，整个总部仿佛都“{MEANING_TAG}”离奇的流言与半空漂浮的茶杯。"
+        ]
+    ],
+    "prep_verb": [
+        [
+            "Cornered by the talking pigeon, the suspect finally had to {WORD_TAG} the strange situation.",
+            "被会说话的鸽子逼到墙角后，嫌疑人最终不得不“{MEANING_TAG}”眼前这个古怪的局面。"
+        ],
+        [
+            "Under the glowing moonlight, the eccentric captain tried to {WORD_TAG} the mysterious artifact.",
+            "在皎洁的月光下，古怪的船长试图“{MEANING_TAG}”这件神秘器物。"
+        ],
+        [
+            "The chief engineer warned everyone never to {WORD_TAG} such a delicate situation.",
+            "总工程师严肃警告所有人，千万不要去“{MEANING_TAG}”这样微妙的局面。"
+        ]
+    ],
+    "verb_person": [
+        [
+            "During the frantic chase, the clumsy assistant tried not to {WORD_TAG} the grumpy commander.",
+            "在慌乱的追逐中，笨手笨脚的助手尽量不去“{MEANING_TAG}”那位脾气暴躁的指挥官。"
+        ],
+        [
+            "After the glowing toaster vanished, everyone gathered around to {WORD_TAG} the worried mascot.",
+            "发光的烤面包机消失后，大家纷纷围过来“{MEANING_TAG}”这只忧心忡忡的小吉祥物。"
+        ],
+        [
+            "In a surprising twist, the secret committee decided to {WORD_TAG} the humble janitor.",
+            "令人意想不到的是，神秘委员会一致决定“{MEANING_TAG}”那位低调的门卫大叔。"
+        ]
+    ],
+    "verb_plan": [
+        [
+            "Trying not to panic, the clever team worked together to {WORD_TAG} the tricky situation.",
+            "冷静下来后，机智的小队齐心协力，决定“{MEANING_TAG}”眼前这道棘手难题。"
+        ],
+        [
+            "At the emergency meeting, the golden retriever suddenly voted to {WORD_TAG} the bizarre proposal.",
+            "在紧急会议上，那只金毛寻回犬突然举爪投票，决定“{MEANING_TAG}”这项离谱的提案。"
+        ],
+        [
+            "Before midnight struck, the engineer somehow managed to {WORD_TAG} a daring plan.",
+            "在午夜钟声敲响前，工程师总算设法“{MEANING_TAG}”了一个大胆的计划。"
+        ]
+    ],
+    "verb_efforts": [
+        [
+            "After the first toaster escaped, the squad swore to {WORD_TAG} their efforts immediately.",
+            "第一台烤面包机逃跑后，小队立刻发誓要将努力“{MEANING_TAG}”。"
+        ]
+    ],
+    "verb_object": [
+        [
+            "Without checking the label, the startled intern tried to {WORD_TAG} the glowing parcel.",
+            "吓了一跳的实习生连标签都没看，差点就把那个发光包裹给“{MEANING_TAG}”了。"
+        ]
+    ],
+    "verb_place": [
+        [
+            "Out of nowhere, a swarm of robotic squirrels began to {WORD_TAG} the entire laboratory.",
+            "不知从哪冒出来一群机器松鼠，开始把整座实验室弄得“{MEANING_TAG}”。"
+        ]
+    ],
+    "verb_intrans": [
+        [
+            "Faced with mounting pressure from the alien squirrel, the stubborn guard chose to {WORD_TAG} right on the spot.",
+            "面对外星松鼠指挥官不断施加的压力，固执的守卫当场选择“{MEANING_TAG}”。"
+        ],
+        [
+            "Even when the alarm started playing opera music, the calm captain continued to {WORD_TAG} without blinking.",
+            "哪怕警报器开始播放歌剧，淡定的船长依然眼都不眨地继续“{MEANING_TAG}”。"
+        ],
+        [
+            "Rather than explaining the floating pancake, the nervous suspect began to {WORD_TAG} in front of everyone.",
+            "紧张的嫌疑人没有解释半空中漂浮的煎饼，反而在众人面前开始“{MEANING_TAG}”。"
+        ]
+    ],
+    "adj_person": [
+        [
+            "Everyone noticed that the rival captain's attitude was undeniably {WORD_TAG}.",
+            "所有人都注意到，那位对手船长的态度简直十分“{MEANING_TAG}”。"
+        ],
+        [
+            "Even under interrogation, the mysterious visitor remained surprisingly {WORD_TAG}.",
+            "即使在审讯之下，这位神秘访客依然显得出奇地“{MEANING_TAG}”。"
+        ]
+    ],
+    "adj_voice": [
+        [
+            "A strangely {WORD_TAG} voice echoed from inside the enchanted teapot.",
+            "一把奇特而又“{MEANING_TAG}”的声音从魔法茶壶里传了出来。"
+        ]
+    ],
+    "adj_place": [
+        [
+            "They tiptoed into a {WORD_TAG} secret room filled with ticking clocks and cheese.",
+            "他们踮着脚尖走进一间“{MEANING_TAG}”密室，里面摆满了滴答作响的挂钟和奶酪。"
+        ]
+    ],
+    "adj_thing": [
+        [
+            "Everyone in the room gasped at how unexpectedly {WORD_TAG} the whole plan turned out to be.",
+            "屋里的所有人都倒吸了一口凉气，没想到整个计划竟然如此“{MEANING_TAG}”。"
+        ],
+        [
+            "Adjusting his golden monocle, the detective declared that the scheme was undeniably {WORD_TAG}.",
+            "侦探扶了扶他的单片金丝眼镜，宣布这个鬼点子无疑是“{MEANING_TAG}”。"
+        ],
+        [
+            "Nobody could ignore the strangely {WORD_TAG} turn of events inside the laboratory.",
+            "谁也无法忽视实验室里这番离奇而又“{MEANING_TAG}”的事态发展。"
+        ]
+    ],
+    "adj_plural": [
+        [
+            "Opening the hidden suitcase, they discovered {WORD_TAG} clues scribbled on tiny tea bags.",
+            "打开隐藏的手提箱后，他们发现小茶包上竟然写着“{MEANING_TAG}”线索。"
+        ]
+    ],
+    "adj_pred": [
+        [
+            "While sirens blared across the rooftop, the whole situation remained completely {WORD_TAG}.",
+            "当警笛在屋顶上空呼啸时，整个局势依然“{MEANING_TAG}”。"
+        ],
+        [
+            "When the team peeked around the corner, things suddenly looked {WORD_TAG}.",
+            "当小队从拐角探出头偷看时，事态突然变得“{MEANING_TAG}”。"
+        ]
+    ],
+    "adverb": [
+        [
+            "Without saying a single word, the cyber pigeon swooped {WORD_TAG} across the blinking control room.",
+            "那只赛博鸽子一言不发，“{MEANING_TAG}”掠过闪烁着指示灯的控制室。"
+        ],
+        [
+            "Following the glowing map, the brave guinea pig acted {WORD_TAG} to save the snack supply.",
+            "顺着发光的地图，勇敢的豚鼠“{MEANING_TAG}”采取行动，保住了零食补给。"
+        ]
+    ],
+    "noun_a_an": [
+        [
+            "Even the strictest judge had to admit that the clever little mascot was truly {WORD_TAG}.",
+            "连最严苛的评委也不得不承认，这只聪明的小吉祥物真是“{MEANING_TAG}”。"
+        ]
+    ],
+    "noun_countable": [
+        [
+            "Pointing at the chalkboard, the professor warned that {ART} {WORD_TAG} could derail the whole mission.",
+            "教授指着黑板严肃警告，只要出现“{MEANING_TAG}”，整项任务就可能彻底脱轨。"
+        ],
+        [
+            "Right in the middle of the interrogation, they stumbled upon {ART} {WORD_TAG} nobody had noticed before.",
+            "就在审讯进行到一半时，他们意外碰上了一个此前谁也没注意到的“{MEANING_TAG}”。"
+        ],
+        [
+            "The alien commander slammed his teacup down, calling the entire excuse {ART} {WORD_TAG}.",
+            "外星指挥官把茶杯重重一放，直言这整套借口简直就是个“{MEANING_TAG}”。"
+        ]
+    ],
+    "noun_uncountable": [
+        [
+            "In the blink of an eye, the peaceful tea party dissolved into pure {WORD_TAG}.",
+            "眨眼之间，原本平静的茶话会就彻底陷入了一片“{MEANING_TAG}”。"
+        ],
+        [
+            "Even the calmest engineer was shocked by the sheer {WORD_TAG} unfolding on the main screen.",
+            "连最沉着的工程师也被主屏幕上上演的这番“{MEANING_TAG}”惊呆了。"
+        ]
+    ],
+    "fallback": [
+        [
+            "Scribbling {WORD_TAG} in giant neon letters on the wall, the detective declared it the key clue of the night.",
+            "侦探在墙上用巨大的霓虹大字写下“{MEANING_TAG}”，并宣称这就是今晚最核心的线索。"
+        ],
+        [
+            "The top-secret notebook contained only one mysterious phrase highlighted in gold: {WORD_TAG}.",
+            "绝密笔记本里只用金色荧光笔标出了一句神秘提示：“{MEANING_TAG}”。"
+        ]
+    ]
+};
+
+function cleanCnGloss(meaning) {
+    let text = (meaning || '').trim();
+    if (!text) return '';
+    text = text.replace(/^(?:\(?\b(?:n|v|vt|vi|adj|adv|prep|conj|idiom|phrasal verb)\b\.?\)?[\s:：]*)/i, '');
+    let cleaned = text.replace(/[（\(][^）\)]*[）\)]/g, '').trim();
+    if (!cleaned) cleaned = text;
+    let primary = cleaned.split(/[；;]/)[0].replace(/^[ ，,。.]+|[ ，,。.]+$/g, '');
+    primary = primary.replace(/(?:做某事|某人|某物)+$/g, '').replace(/^[ ，,。.]+|[ ，,。.]+$/g, '');
+    return primary || text;
+}
+
+function inferPos(word, meaning) {
+    const wLower = (word || '').trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(WORD_POS_MAP, wLower)) {
+        return WORD_POS_MAP[wLower];
+    }
+
+    const mRaw = (meaning || '').trim();
+    const mLower = mRaw.toLowerCase();
+
+    if (wLower.startsWith('be ') && wLower.endsWith(' with')) return 'be_rife';
+    if (wLower.endsWith(' to') && wLower.includes(' ')) return 'infinitive_to';
+    if (wLower.startsWith('a ') || wLower.startsWith('an ')) return 'noun_a_an';
+    if (/\b(with|of|on|at|in|for|from|into|about)$/.test(wLower) && wLower.includes(' ')) return 'prep_verb';
+
+    if (/^(\(?adv\.?\)?)\b/.test(mLower) || (mRaw.endsWith('地') && !mRaw.endsWith('土地'))) return 'adverb';
+    if (/^(\(?adj\.?\)?)\b/.test(mLower) || mRaw.endsWith('的')) return 'adj_thing';
+    if (/^(\(?vt\.?\)?)\b/.test(mLower)) return 'verb_plan';
+    if (/^(\(?vi\.?\)?)\b/.test(mLower)) return 'verb_intrans';
+    if (/^(\(?v\.?\)?)\b/.test(mLower)) return wLower.includes(' ') ? 'verb_intrans' : 'verb_plan';
+    if (/^(\(?n\.?\)?)\b/.test(mLower)) return 'noun_countable';
+
+    if (!wLower.includes(' ')) {
+        if (wLower.endsWith('ly')) return 'adverb';
+        if (/(tion|sion|ment|ness|ity|ism|ance|ence|ship|logy)$/.test(wLower)) return 'noun_countable';
+        if (/(ous|ful|less|able|ible|ive|al|ic|ish)$/.test(wLower)) return 'adj_thing';
+    }
+    return 'fallback';
+}
+
+function pickArticle(word) {
+    const w = (word || '').trim().toLowerCase();
+    if (!w) return 'a';
+    return 'aeiou'.includes(w[0]) ? 'an' : 'a';
+}
 
 function generateAbsurdStory(errorWords) {
     if (!errorWords || !errorWords.length) return null;
@@ -518,36 +875,27 @@ function generateAbsurdStory(errorWords) {
 
     const theme = STORY_THEMES[Math.floor(Math.random() * STORY_THEMES.length)];
     const paragraphs = [{ en: theme.intro_en, cn: theme.intro_cn, words_used: [] }];
-    const availableTemplates = shuffleArray(theme.templates);
-    const wildActions = [
-        ['Suddenly, a masked penguin appeared and shouted that {WORD_TAG} was the true secret of the universe!',
-         '突然间，一只蒙面企鹅跳出来大喊：{MEANING_TAG}才是全宇宙真正的终极秘密！'],
-        ['Nobody could explain why the floating pancake was so unbelievably {WORD_TAG}.',
-         '没有人能解释得通，为什么半空中漂浮的煎饼居然会如此令人难以置信地{MEANING_TAG}。'],
-        ['The royal guard decided to {WORD_TAG} the magic banana before the spaceship touched down.',
-         '皇家侍卫决定在宇宙飞船着陆前，先把这根神奇香蕉给{MEANING_TAG}掉。'],
-        ['A dancing dinosaur proved beyond doubt that learning English while eating tacos was totally {WORD_TAG}.',
-         '一只跳着街舞的恐龙无可辩驳地证明：一边吃塔可卷一边背单词绝对是纯纯的{MEANING_TAG}。']
-    ];
+    const usedTemplates = new Set();
 
-    uniqueWords.forEach((wItem, idx) => {
-        const [tplEn, tplCn] = idx < availableTemplates.length
-            ? availableTemplates[idx]
-            : wildActions[Math.floor(Math.random() * wildActions.length)];
+    for (const wItem of uniqueWords) {
+        const glossCn = cleanCnGloss(wItem.meaning);
+        const pos = inferPos(wItem.word, wItem.meaning);
+        const art = pickArticle(wItem.word);
 
-        const pEn = tplEn.replace('{WORD_TAG}', `**${wItem.word}**`);
-        const pCn = tplCn.replace('{MEANING_TAG}', `“${wItem.meaning}”`);
-        const htmlEn = escHtml(tplEn).replace(
-            '{WORD_TAG}',
-            `<span class="story-vocab-pill" data-word="${escHtml(wItem.word)}" data-meaning="${escHtml(wItem.meaning)}"><b class="en-w">${escHtml(wItem.word)}</b> <small class="cn-m">(${escHtml(wItem.meaning)})</small></span>`
-        );
-        const htmlCn = escHtml(tplCn).replace(
-            '{MEANING_TAG}',
-            `<span class="story-meaning-pill">${escHtml(wItem.meaning)}</span>`
-        );
+        const candidates = TEMPLATES_BY_POS[pos] || TEMPLATES_BY_POS.fallback;
+        const unused = candidates.filter(t => !usedTemplates.has(t[0]));
+        const pool = unused.length ? unused : candidates;
+        const [tplEn, tplCn] = pool[Math.floor(Math.random() * pool.length)];
+        usedTemplates.add(tplEn);
+
+        const pEn = tplEn.replace('{ART}', art).replace('{WORD_TAG}', `**${wItem.word}**`);
+        const pCn = tplCn.replace('{MEANING_TAG}', glossCn);
+        const pillHtml = `<span class="story-vocab-pill" data-word="${escHtml(wItem.word)}" data-meaning="${escHtml(wItem.meaning)}"><b class="en-w">${escHtml(wItem.word)}</b> <small class="cn-m">(${escHtml(glossCn)})</small></span>`;
+        const htmlEn = escHtml(tplEn).replace('{ART}', art).replace('{WORD_TAG}', pillHtml);
+        const htmlCn = escHtml(tplCn).replace('{MEANING_TAG}', `<span class="story-meaning-pill">${escHtml(glossCn)}</span>`);
 
         paragraphs.push({ en: pEn, cn: pCn, html_en: htmlEn, html_cn: htmlCn, words_used: [wItem] });
-    });
+    }
 
     paragraphs.push({ en: theme.ending_en, cn: theme.ending_cn, words_used: [] });
 
