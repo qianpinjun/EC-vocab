@@ -58,12 +58,48 @@ const GrammarVideoPlayer = {
         }
     },
 
-    load(scenes, title, onComplete = null) {
+    getVideoBasePath() {
+        return window.EC_SEED_DATA ? './videos' : '/static/videos';
+    },
+
+    async load(scenes, title, onComplete = null, videoId = null) {
         this.stop();
         this.scenes = scenes || [];
         this.onComplete = onComplete;
         const headerTitle = document.getElementById('gVideoTitle');
         if (headerTitle) headerTitle.textContent = title || 'Quick Reminder Video';
+
+        const realVideo = document.getElementById('gRealVideoEl');
+        const fallbackWrap = document.getElementById('gVideoFallbackWrap');
+        const dotsWrap = document.getElementById('gVideoDots');
+        const stepCounter = document.getElementById('gVideoStepText');
+
+        // Try loading pre-downloaded Gemini MP4 video first
+        if (videoId && realVideo) {
+            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4`;
+            try {
+                const headRes = await fetch(mp4Url, { method: 'HEAD' });
+                if (headRes.ok) {
+                    if (fallbackWrap) fallbackWrap.style.display = 'none';
+                    if (dotsWrap) dotsWrap.style.display = 'none';
+                    if (stepCounter) stepCounter.textContent = '720p MP4';
+                    realVideo.style.display = 'block';
+                    realVideo.src = mp4Url;
+                    realVideo.play().catch(() => {});
+                    return;
+                }
+            } catch (e) {}
+        }
+
+        // Fallback to interactive animated slides if MP4 not yet downloaded
+        if (realVideo) {
+            realVideo.pause();
+            realVideo.removeAttribute('src');
+            realVideo.style.display = 'none';
+        }
+        if (fallbackWrap) fallbackWrap.style.display = 'block';
+        if (dotsWrap) dotsWrap.style.display = 'flex';
+
         this.bindControls();
         this.renderTimelineDots();
         if (this.scenes.length > 0) {
@@ -179,6 +215,10 @@ const GrammarVideoPlayer = {
         this.pause();
         const fill = document.getElementById('gVideoProgressFill');
         if (fill) fill.style.width = '0%';
+        const realVideo = document.getElementById('gRealVideoEl');
+        if (realVideo) {
+            realVideo.pause();
+        }
     },
 
     clearTimers() {
@@ -496,7 +536,7 @@ const GrammarModule = {
         const mount = document.getElementById('gQuickVideoMount');
         const stage = document.getElementById('gVideoPlayerShell');
         if (mount && stage) mount.appendChild(stage);
-        GrammarVideoPlayer.load(topic.videoScenes, `Quick Reminder · ${topic.title}`);
+        GrammarVideoPlayer.load(topic.videoScenes, `Quick Reminder · ${topic.title}`, null, topic.id);
     },
 
     startQuiz(questions, isRetry = false) {
@@ -786,7 +826,7 @@ const GrammarModule = {
             mount.appendChild(stage);
             modal.style.display = 'flex';
             const scenes = buildMistakeVideoScenes(mistake);
-            GrammarVideoPlayer.load(scenes, `错题 #${num} 视频精讲`);
+            GrammarVideoPlayer.load(scenes, `错题 #${num} 视频精讲`, null, mistake.question?.id || null);
         }
     }
 };

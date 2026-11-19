@@ -579,34 +579,37 @@ dialogue 对话，对白"></textarea>
                     </div>
                     <div class="g-video-dots" id="gVideoDots"></div>
                 </div>
-                <div class="g-video-stage">
-                    <div class="g-video-stage-body" id="gVideoStageBody">
-                        <div class="g-scene-slide">
-                            <span class="g-scene-badge" id="gVideoSceneBadge">Scene 1</span>
-                            <h3 class="g-scene-title" id="gVideoSceneTitle"></h3>
-                            <div class="g-scene-boxes">
-                                <div class="g-scene-card" id="gVideoLeftLine"></div>
-                                <div class="g-scene-card" id="gVideoRightLine"></div>
-                            </div>
-                            <div class="g-scene-result" id="gVideoResultLine"></div>
-                            <div class="g-scene-footer">
-                                <span id="gVideoCnTip"></span>
-                                <span class="g-rule-pill" id="gVideoRulePill"></span>
+                <video id="gRealVideoEl" controls playsinline preload="metadata" style="width: 100%; max-height: 440px; display: none; background: #000;"></video>
+                <div id="gVideoFallbackWrap">
+                    <div class="g-video-stage">
+                        <div class="g-video-stage-body" id="gVideoStageBody">
+                            <div class="g-scene-slide">
+                                <span class="g-scene-badge" id="gVideoSceneBadge">Scene 1</span>
+                                <h3 class="g-scene-title" id="gVideoSceneTitle"></h3>
+                                <div class="g-scene-boxes">
+                                    <div class="g-scene-card" id="gVideoLeftLine"></div>
+                                    <div class="g-scene-card" id="gVideoRightLine"></div>
+                                </div>
+                                <div class="g-scene-result" id="gVideoResultLine"></div>
+                                <div class="g-scene-footer">
+                                    <span id="gVideoCnTip"></span>
+                                    <span class="g-rule-pill" id="gVideoRulePill"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="g-video-progress-track">
-                    <div class="g-video-progress-fill" id="gVideoProgressFill"></div>
-                </div>
-                <div class="g-video-controls">
-                    <div class="g-video-ctrl-group">
-                        <button type="button" class="g-ctrl-btn" id="gVideoPlayBtn"><i class="fa-solid fa-pause"></i> 暂停</button>
-                        <button type="button" class="g-ctrl-btn" id="gVideoRestartBtn"><i class="fa-solid fa-rotate-left"></i> 重播</button>
-                        <button type="button" class="g-ctrl-btn" id="gVideoPrevBtn"><i class="fa-solid fa-backward-step"></i> 上一幕</button>
-                        <button type="button" class="g-ctrl-btn" id="gVideoNextBtn"><i class="fa-solid fa-forward-step"></i> 下一幕</button>
+                    <div class="g-video-progress-track">
+                        <div class="g-video-progress-fill" id="gVideoProgressFill"></div>
                     </div>
-                    <button type="button" class="g-ctrl-btn" id="gVideoVoiceBtn"><i class="fa-solid fa-volume-xmark"></i> 语音讲解: 关</button>
+                    <div class="g-video-controls">
+                        <div class="g-video-ctrl-group">
+                            <button type="button" class="g-ctrl-btn" id="gVideoPlayBtn"><i class="fa-solid fa-pause"></i> 暂停</button>
+                            <button type="button" class="g-ctrl-btn" id="gVideoRestartBtn"><i class="fa-solid fa-rotate-left"></i> 重播</button>
+                            <button type="button" class="g-ctrl-btn" id="gVideoPrevBtn"><i class="fa-solid fa-backward-step"></i> 上一幕</button>
+                            <button type="button" class="g-ctrl-btn" id="gVideoNextBtn"><i class="fa-solid fa-forward-step"></i> 下一幕</button>
+                        </div>
+                        <button type="button" class="g-ctrl-btn" id="gVideoVoiceBtn"><i class="fa-solid fa-volume-xmark"></i> 语音讲解: 关</button>
+                    </div>
                 </div>
             </div>
         </div>
