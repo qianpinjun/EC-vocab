@@ -1,5 +1,29 @@
 import random
 import re
+from vocab_question_bank import VOCAB_QUESTION_BANK
+
+# Per-(user, word) anti-repeat 4-card deck so retries and replays always rotate through all 4 distinct questions
+_VARIANT_DECKS = {}
+_LAST_VARIANT = {}
+
+
+def _pop_next_variant_index(word_lower, total_variants=4, user_key="default"):
+    """Pop the next unseen variant index from a shuffled deck; reshuffle avoiding immediate repeat."""
+    if total_variants <= 1:
+        return 0
+    deck_key = (str(user_key), word_lower)
+    deck = _VARIANT_DECKS.get(deck_key)
+    if not deck:
+        deck = list(range(total_variants))
+        random.shuffle(deck)
+        last = _LAST_VARIANT.get(deck_key)
+        if last is not None and len(deck) > 1 and deck[-1] == last:
+            # Swap top-of-stack (popped from end) so we never repeat immediately across reshuffles
+            deck[0], deck[-1] = deck[-1], deck[0]
+        _VARIANT_DECKS[deck_key] = deck
+    idx = deck.pop()
+    _LAST_VARIANT[deck_key] = idx
+    return idx
 
 # Curated fallback distractor pool in case word list has < 4 words
 DEFAULT_DISTRACTORS = [
@@ -103,7 +127,55 @@ def make_cloze_sentence(word, meaning, example_en, example_cn):
 
     return cloze_en, cloze_cn, example_cn
 
-def generate_contextual_question(target_word, candidate_pool, all_user_words):
+def _build_custom_variants(w_str, m_str, ex_en, ex_cn):
+    """Build up to 4 varied question prompts for custom user-added words not in the 137-word bank."""
+    variants = []
+    if ex_en:
+        cloze_en, cloze_cn, full_cn = make_cloze_sentence(w_str, m_str, ex_en, ex_cn)
+        if cloze_en:
+            variants.append((
+                "原句语境填空",
+                cloze_en,
+                cloze_cn or "语境提示：根据英文语境选择最符合的单词",
+                full_cn or f"语境译文：与“{m_str}”相关的应用情景",
+            ))
+
+    # Add 3-4 varied template angles so custom words also never feel identical
+    custom_templates = [
+        (
+            "学术与课堂语境",
+            "During the seminar discussion, the instructor pointed out how accurately [ ______ ] fits this context.",
+            "在研讨会讨论中，老师指出 [ ______ ] 恰如其分地契合了这一语境。",
+            f"在研讨会讨论中，老师指出【{m_str}】恰如其分地契合了这一语境。",
+        ),
+        (
+            "情景对话辨析",
+            "A: 'Which exact term captures the idea we just talked about?' B: 'The best choice here is definitely [ ______ ].'",
+            "A：“哪个词最能准确表达我们刚才说的意思？” B：“这里最贴切的词无疑是 [ ______ ]。”",
+            f"A：“哪个词最能准确表达我们刚才说的意思？” B：“这里最贴切的词无疑是【{m_str}】。”",
+        ),
+        (
+            "释义精准匹配",
+            f"Select the English word or expression that best matches the meaning: “{m_str}”.",
+            "释义匹配提示：请直接根据中文释义选出对应的英文词条。",
+            f"正确释义：{m_str}（{w_str}）。",
+        ),
+    ]
+    for tpl in custom_templates:
+        if len(variants) < 4:
+            variants.append(tpl)
+    if len(variants) < 4:
+        tpl = random.choice(SCENARIO_TEMPLATES)
+        variants.append((
+            tpl["category"],
+            tpl["context_en"].replace("______", "[ ______ ]"),
+            tpl["context_cn"].replace("______", "[ ______ ]"),
+            tpl["context_cn"].replace("______", f"【{m_str}】"),
+        ))
+    return variants
+
+
+def generate_contextual_question(target_word, candidate_pool, all_user_words, user_key="default"):
     """
     target_word: dict {id, word, meaning, example_en, example_cn}
     candidate_pool: list of words from the current list
@@ -113,28 +185,19 @@ def generate_contextual_question(target_word, candidate_pool, all_user_words):
     m_str = target_word['meaning'].strip()
     ex_en = target_word.get('example_en', '').strip()
     ex_cn = target_word.get('example_cn', '').strip()
+    w_lower = w_str.lower()
 
-    # Step 1: determine context & scenario
-    category = "综合情境"
-    scenario_en = ""
-    scenario_cn_cloze = ""
-    scenario_cn_full = ""
-
-    if ex_en:
-        cloze_en, cloze_cn, full_cn = make_cloze_sentence(w_str, m_str, ex_en, ex_cn)
-        if cloze_en:
-            scenario_en = cloze_en
-            scenario_cn_cloze = cloze_cn or "语境提示：根据英文语境选择最符合的单词"
-            scenario_cn_full = full_cn or f"语境译文：与“{m_str}”相关的应用情景"
-            category = "真实例句情境"
-
-    if not scenario_en:
-        # Pick dynamic scenario based on target word
-        tpl = random.choice(SCENARIO_TEMPLATES)
-        category = tpl['category']
-        scenario_en = tpl['context_en']
-        scenario_cn_cloze = tpl['context_cn']  # has ______
-        scenario_cn_full = tpl['context_cn'].replace("______", f"【{m_str}】")
+    # Step 1: Select an unseen variant from the word's 4-question deck
+    bank_variants = VOCAB_QUESTION_BANK.get(w_lower)
+    if bank_variants and len(bank_variants) >= 1:
+        v_idx = _pop_next_variant_index(w_lower, len(bank_variants), user_key=user_key)
+        raw_cat, scenario_en, scenario_cn_cloze, scenario_cn_full = bank_variants[v_idx]
+        category = f"{raw_cat} · 题型 {v_idx + 1}/{len(bank_variants)}"
+    else:
+        custom_variants = _build_custom_variants(w_str, m_str, ex_en, ex_cn)
+        v_idx = _pop_next_variant_index(w_lower, len(custom_variants), user_key=user_key)
+        raw_cat, scenario_en, scenario_cn_cloze, scenario_cn_full = custom_variants[v_idx]
+        category = f"{raw_cat} · 题型 {v_idx + 1}/{len(custom_variants)}"
 
     # Step 2: Build 4 options (1 correct, 3 distractors)
     options_set = {w_str.lower()}
@@ -212,16 +275,17 @@ def generate_contextual_question(target_word, candidate_pool, all_user_words):
         'options': labeled_options
     }
 
-def generate_quiz_round(words_to_test, all_user_words):
+def generate_quiz_round(words_to_test, all_user_words, user_key="default"):
     """
-    Generates contextual questions for all words in words_to_test
+    Generates contextual questions for all words in words_to_test, rotating through
+    each word's 4-question deck so repeat rounds never feel identical.
     """
     questions = []
     shuffled_words = list(words_to_test)
     random.shuffle(shuffled_words)
 
     for word_item in shuffled_words:
-        q = generate_contextual_question(word_item, words_to_test, all_user_words)
+        q = generate_contextual_question(word_item, words_to_test, all_user_words, user_key=user_key)
         questions.append(q)
 
     return questions

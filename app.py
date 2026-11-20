@@ -219,7 +219,7 @@ def api_quiz_start():
         return jsonify({'success': False, 'error': '当前词库暂无单词，请先录入或导入单词！'}), 400
 
     all_words = WordModel.get_extra_random_words(user_id, exclude_words=[], count=100)
-    questions = generate_quiz_round(words, all_words)
+    questions = generate_quiz_round(words, all_words, user_key=user_id)
 
     return jsonify({
         'success': True,
@@ -335,7 +335,7 @@ def api_next_round():
 
     next_round_pool = list(deduped_errors) + list(extra_words)
     all_words = WordModel.get_words_by_list(user_id, list_id) if list_id else []
-    questions = generate_quiz_round(next_round_pool, all_words)
+    questions = generate_quiz_round(next_round_pool, all_words, user_key=user_id)
 
     return jsonify({
         'success': True,

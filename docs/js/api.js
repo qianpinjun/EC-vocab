@@ -340,33 +340,126 @@ function makeClozeSentence(word, meaning, exampleEn, exampleCn) {
     return { clozeEn, clozeCn, fullCn: exampleCn };
 }
 
+const Q_DECK_STORAGE_KEY = 'ec_vocab_q_decks_v1';
+let _memVariantDecks = null;
+
+function _loadVariantDecks() {
+    if (_memVariantDecks) return _memVariantDecks;
+    try {
+        const raw = localStorage.getItem(Q_DECK_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (parsed && typeof parsed === 'object') {
+            _memVariantDecks = parsed;
+            return _memVariantDecks;
+        }
+    } catch (e) {}
+    _memVariantDecks = { decks: {}, last: {} };
+    return _memVariantDecks;
+}
+
+function _saveVariantDecks() {
+    try {
+        localStorage.setItem(Q_DECK_STORAGE_KEY, JSON.stringify(_memVariantDecks));
+    } catch (e) {}
+}
+
+function popNextVariantIndex(wordLower, totalVariants = 4) {
+    if (totalVariants <= 1) return 0;
+    const state = _loadVariantDecks();
+    let deck = state.decks[wordLower];
+    if (!Array.isArray(deck) || deck.length === 0) {
+        deck = shuffleArray(Array.from({ length: totalVariants }, (_, i) => i));
+        const last = state.last[wordLower];
+        if (typeof last === 'number' && deck.length > 1 && deck[deck.length - 1] === last) {
+            const tmp = deck[0];
+            deck[0] = deck[deck.length - 1];
+            deck[deck.length - 1] = tmp;
+        }
+        state.decks[wordLower] = deck;
+    }
+    const idx = deck.pop();
+    state.last[wordLower] = idx;
+    _saveVariantDecks();
+    return idx;
+}
+
+function buildCustomQuestionVariants(wStr, mStr, exEn, exCn) {
+    const variants = [];
+    if (exEn) {
+        const { clozeEn, clozeCn, fullCn } = makeClozeSentence(wStr, mStr, exEn, exCn);
+        if (clozeEn) {
+            variants.push([
+                '原句语境填空',
+                clozeEn,
+                clozeCn || '语境提示：根据英文语境选择最符合的单词',
+                fullCn || `语境译文：与“${mStr}”相关的应用情景`
+            ]);
+        }
+    }
+    const fallbacks = [
+        [
+            '学术与课堂语境',
+            'During the seminar discussion, the instructor pointed out how accurately [ ______ ] fits this context.',
+            '在研讨会讨论中，老师指出 [ ______ ] 恰如其分地契合了这一语境。',
+            `在研讨会讨论中，老师指出【${mStr}】恰如其分地契合了这一语境。`
+        ],
+        [
+            '情景对话辨析',
+            "A: 'Which exact term captures the idea we just talked about?' B: 'The best choice here is definitely [ ______ ].'",
+            'A：“哪个词最能准确表达我们刚才说的意思？” B：“这里最贴切的词无疑是 [ ______ ]。”',
+            `A：“哪个词最能准确表达我们刚才说的意思？” B：“这里最贴切的词无疑是【${mStr}】。”`
+        ],
+        [
+            '释义精准匹配',
+            `Select the English word or expression that best matches the meaning: “${mStr}”.`,
+            '释义匹配提示：请直接根据中文释义选出对应的英文词条。',
+            `正确释义：${mStr}（${wStr}）。`
+        ]
+    ];
+    for (const item of fallbacks) {
+        if (variants.length < 4) variants.push(item);
+    }
+    if (variants.length < 4) {
+        const tpl = SCENARIO_TEMPLATES[Math.floor(Math.random() * SCENARIO_TEMPLATES.length)];
+        variants.push([
+            tpl.category,
+            tpl.context_en.replace('______', '[ ______ ]'),
+            tpl.context_cn.replace('______', '[ ______ ]'),
+            tpl.context_cn.replace('______', `【${mStr}】`)
+        ]);
+    }
+    return variants;
+}
+
 function generateContextualQuestion(targetWord, candidatePool, allUserWords) {
     const wStr = (targetWord.word || '').trim();
     const mStr = (targetWord.meaning || '').trim();
     const exEn = (targetWord.example_en || '').trim();
     const exCn = (targetWord.example_cn || '').trim();
+    const wLower = wStr.toLowerCase();
 
     let category = '综合情境';
     let scenarioEn = '';
     let scenarioCnCloze = '';
     let scenarioCnFull = '';
 
-    if (exEn) {
-        const { clozeEn, clozeCn, fullCn } = makeClozeSentence(wStr, mStr, exEn, exCn);
-        if (clozeEn) {
-            scenarioEn = clozeEn;
-            scenarioCnCloze = clozeCn || '语境提示：根据英文语境选择最符合的单词';
-            scenarioCnFull = fullCn || `语境译文：与“${mStr}”相关的应用情景`;
-            category = '真实例句情境';
-        }
-    }
-
-    if (!scenarioEn) {
-        const tpl = SCENARIO_TEMPLATES[Math.floor(Math.random() * SCENARIO_TEMPLATES.length)];
-        category = tpl.category;
-        scenarioEn = tpl.context_en;
-        scenarioCnCloze = tpl.context_cn;
-        scenarioCnFull = tpl.context_cn.replace('______', `【${mStr}】`);
+    const bank = window.VOCAB_QUESTION_BANK || {};
+    const bankVariants = bank[wLower];
+    if (Array.isArray(bankVariants) && bankVariants.length > 0) {
+        const vIdx = popNextVariantIndex(wLower, bankVariants.length);
+        const [rawCat, en, cnCloze, cnFull] = bankVariants[vIdx];
+        category = `${rawCat} · 题型 ${vIdx + 1}/${bankVariants.length}`;
+        scenarioEn = en;
+        scenarioCnCloze = cnCloze;
+        scenarioCnFull = cnFull;
+    } else {
+        const customVariants = buildCustomQuestionVariants(wStr, mStr, exEn, exCn);
+        const vIdx = popNextVariantIndex(wLower, customVariants.length);
+        const [rawCat, en, cnCloze, cnFull] = customVariants[vIdx];
+        category = `${rawCat} · 题型 ${vIdx + 1}/${customVariants.length}`;
+        scenarioEn = en;
+        scenarioCnCloze = cnCloze;
+        scenarioCnFull = cnFull;
     }
 
     const optionsSet = new Set([wStr.toLowerCase()]);
