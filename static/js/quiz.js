@@ -9,6 +9,9 @@ const QuizModule = {
     isAnswering: false,
     autoNextTimer: null,
     currentStoryText: '',
+    currentStoryEnglish: '',
+    currentStoryWords: [],
+    isGeneratingAiStory: false,
 
     init() {
         this.bindEvents();
@@ -71,7 +74,21 @@ const QuizModule = {
             });
         }
 
-        // Story actions: Speak & Copy
+        // Story actions: Theme Switch, Browser Local AI, Speak & Copy
+        const themeSel = document.getElementById('storyThemeSelect');
+        if (themeSel) {
+            themeSel.addEventListener('change', () => {
+                this.regenerateCuratedStory(themeSel.value);
+            });
+        }
+
+        const btnAi = document.getElementById('btnAiStory');
+        if (btnAi) {
+            btnAi.addEventListener('click', () => {
+                this.runLocalAiStory();
+            });
+        }
+
         const btnSpeak = document.getElementById('btnSpeakStory');
         if (btnSpeak) {
             btnSpeak.addEventListener('click', () => {
@@ -352,27 +369,13 @@ const QuizModule = {
             tbody.appendChild(tr);
         });
 
-        // 2. Render Absurd Story (Round 1 only)
+        // 2. Render Contextual Story (Round 1 only)
         if (this.currentRound === 1 && data.story) {
             storySection.style.display = 'block';
-            document.getElementById('storyBookTitle').textContent = data.story.title || '错词语境融合小故事';
-            
-            const storyBox = document.getElementById('storyContentBox');
-            storyBox.innerHTML = '';
-            let rawTextForSpeech = '';
-
-            data.story.paragraphs.forEach(p => {
-                const pDiv = document.createElement('div');
-                pDiv.className = 'story-para';
-                pDiv.innerHTML = `
-                    <div class="story-en-line">${p.html_en || escapeHtml(p.en)}</div>
-                    <div class="story-cn-line">${p.html_cn || escapeHtml(p.cn)}</div>
-                `;
-                storyBox.appendChild(pDiv);
-                rawTextForSpeech += p.en + ' ' + p.cn + '\n';
-            });
-
-            this.currentStoryText = `${data.story.title}\n\n` + rawTextForSpeech;
+            this.currentStoryWords = (data.story.words && data.story.words.length)
+                ? data.story.words
+                : (data.mistakes || []).map(m => ({ word: m.word, meaning: m.correct_meaning }));
+            this.renderStoryPayload(data.story);
         }
 
         // 3. Render Penalty Next Round
@@ -381,6 +384,109 @@ const QuizModule = {
         document.getElementById('penaltyExplain').innerHTML = 
             `本轮答错 <strong>${mistakesCount}</strong> 个词。<br>` +
             `根据规则，下一轮将把错词重新打乱考查，并<strong>额外加罚引入 ${neededPenaltyWords} 个随机词汇</strong>（每错1个加2个）继续强化，直到全对！`;
+    },
+
+    renderStoryPayload(story) {
+        if (!story) return;
+        document.getElementById('storyBookTitle').textContent = story.title || '错词语境融合小故事';
+        const themeSel = document.getElementById('storyThemeSelect');
+        if (themeSel && story.theme_id) {
+            themeSel.value = story.theme_id;
+        }
+        const badge = document.getElementById('storyEngineBadge');
+        if (badge) {
+            badge.textContent = story.engine_label || (story.engine === 'local_ai'
+                ? '🧠 Qwen2.5-0.5B 浏览器本地 AI 创作'
+                : '语法精校故事引擎 · 即时生成');
+            badge.classList.toggle('is-ai', story.engine === 'local_ai');
+        }
+
+        const storyBox = document.getElementById('storyContentBox');
+        storyBox.innerHTML = '';
+        let rawTextAll = '';
+        let rawEnglishOnly = '';
+
+        (story.paragraphs || []).forEach(p => {
+            const pDiv = document.createElement('div');
+            pDiv.className = 'story-para';
+            pDiv.innerHTML = `
+                <div class="story-en-line">${p.html_en || escapeHtml(p.en)}</div>
+                <div class="story-cn-line">${p.html_cn || escapeHtml(p.cn)}</div>
+            `;
+            storyBox.appendChild(pDiv);
+            rawTextAll += p.en + '\n' + (p.cn || '') + '\n\n';
+            rawEnglishOnly += p.en + ' ';
+        });
+
+        this.currentStoryText = `${story.title}\n\n${rawTextAll.trim()}`;
+        this.currentStoryEnglish = rawEnglishOnly.trim();
+    },
+
+    async regenerateCuratedStory(themeId) {
+        if (!this.currentStoryWords.length) return;
+        try {
+            if (window.StoryStudio && typeof window.StoryStudio.generateCurated === 'function') {
+                const story = window.StoryStudio.generateCurated(this.currentStoryWords, themeId);
+                this.renderStoryPayload(story);
+                return;
+            }
+            if (API.story && API.story.generate) {
+                const res = await API.story.generate(this.currentStoryWords, themeId);
+                if (res && res.story) this.renderStoryPayload(res.story);
+            }
+        } catch (e) {
+            showToast('切换主题失败: ' + e.message, 'error');
+        }
+    },
+
+    async runLocalAiStory() {
+        if (this.isGeneratingAiStory) return;
+        if (!this.currentStoryWords.length) return;
+        if (!window.StoryStudio || typeof window.StoryStudio.generateWithLocalAI !== 'function') {
+            showToast('本地 AI 模块未就绪，请刷新页面后重试', 'error');
+            return;
+        }
+
+        const btnAi = document.getElementById('btnAiStory');
+        const progWrap = document.getElementById('storyAiProgressWrap');
+        const progText = document.getElementById('storyAiProgressText');
+        const progPct = document.getElementById('storyAiProgressPct');
+        const progFill = document.getElementById('storyAiProgressFill');
+        const themeSel = document.getElementById('storyThemeSelect');
+        const themeId = themeSel ? themeSel.value : 'journalism';
+
+        this.isGeneratingAiStory = true;
+        if (btnAi) {
+            btnAi.disabled = true;
+            btnAi.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 本地 AI 创作中...';
+        }
+        if (progWrap) progWrap.style.display = 'block';
+
+        try {
+            const aiStory = await window.StoryStudio.generateWithLocalAI(
+                this.currentStoryWords,
+                themeId,
+                ({ pct, text }) => {
+                    if (progText && text) progText.textContent = text;
+                    if (progPct && typeof pct === 'number') progPct.textContent = `${pct}%`;
+                    if (progFill && typeof pct === 'number') progFill.style.width = `${pct}%`;
+                }
+            );
+            if (aiStory) {
+                this.renderStoryPayload(aiStory);
+                showToast('浏览器本地 AI 故事创作完成！', 'success');
+            }
+        } catch (err) {
+            console.error('Local AI story error:', err);
+            showToast('本地 AI 加载失败（已保留语法精校版）：' + (err.message || err), 'warning');
+        } finally {
+            this.isGeneratingAiStory = false;
+            if (btnAi) {
+                btnAi.disabled = false;
+                btnAi.innerHTML = '<i class="fa-solid fa-microchip"></i> 浏览器本地 AI 创作';
+            }
+            if (progWrap) progWrap.style.display = 'none';
+        }
     },
 
     async startPenaltyNextRound() {
@@ -423,12 +529,14 @@ const QuizModule = {
         }
 
         window.speechSynthesis.cancel();
-        if (!this.currentStoryText) return;
+        const textToRead = this.currentStoryEnglish || this.currentStoryText;
+        if (!textToRead) return;
 
-        const utterance = new SpeechSynthesisUtterance(this.currentStoryText);
-        utterance.rate = 0.95;
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.94;
         window.speechSynthesis.speak(utterance);
-        showToast('正在朗读故事...', 'info');
+        showToast('正在朗读英文故事...', 'info');
     }
 };
 

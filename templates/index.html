@@ -132,6 +132,9 @@
                         <p class="subtitle">浏览已收录词汇、管理学习单元或录入新单词。</p>
                     </div>
                     <div class="header-right">
+                        <button class="btn btn-secondary" id="btnOpenStoryStudio" title="立即用本单元词汇体验写实故事与浏览器本地小模型 AI">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 词汇故事工坊
+                        </button>
                         <button class="btn btn-secondary" id="btnNewListModal">
                             <i class="fa-solid fa-plus"></i> 新建单元
                         </button>
@@ -371,27 +374,49 @@ dialogue 对话，对白"></textarea>
                         </div>
                     </div>
 
-                    <!-- Section: Absurd Story -->
+                    <!-- Section: Contextual Vocab Story -->
                     <div class="story-panel" id="absurdStorySection" style="display: none;">
                         <div class="story-header">
                             <div>
-                                <span class="story-tag">记忆强化故事</span>
+                                <div class="story-badge-row">
+                                    <span class="story-tag">语境记忆故事</span>
+                                    <span class="story-engine-badge" id="storyEngineBadge">语法精校故事引擎 · 即时生成</span>
+                                </div>
                                 <h3 id="storyBookTitle">错词语境融合小故事</h3>
                             </div>
                             <div class="story-tools">
+                                <select id="storyThemeSelect" class="form-select story-theme-select" title="切换写实主题">
+                                    <option value="journalism">校园新闻调查</option>
+                                    <option value="debate">辩论赛决赛</option>
+                                    <option value="harbor">北港档案谜案</option>
+                                    <option value="startup">青年科创路演</option>
+                                    <option value="memoir">老城秋日手记</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" id="btnAiStory" title="在浏览器内直接加载 Qwen2.5-0.5B 免费小模型现场创作">
+                                    <i class="fa-solid fa-microchip"></i> 浏览器本地 AI 创作
+                                </button>
                                 <button class="btn btn-secondary btn-sm" id="btnSpeakStory">
-                                    <i class="fa-solid fa-volume-high"></i> 朗读故事
+                                    <i class="fa-solid fa-volume-high"></i> 朗读英文
                                 </button>
                                 <button class="btn btn-secondary btn-sm" id="btnCopyStory">
                                     <i class="fa-regular fa-copy"></i> 复制全文
                                 </button>
                             </div>
                         </div>
+                        <div class="story-ai-progress" id="storyAiProgressWrap" style="display: none;">
+                            <div class="story-ai-progress-top">
+                                <span id="storyAiProgressText">正在准备本地小模型 Qwen2.5-0.5B...</span>
+                                <strong id="storyAiProgressPct">0%</strong>
+                            </div>
+                            <div class="story-ai-bar">
+                                <div class="story-ai-bar-fill" id="storyAiProgressFill" style="width: 0%;"></div>
+                            </div>
+                        </div>
                         <div class="story-body" id="storyContentBox">
                             <!-- Story paragraphs -->
                         </div>
                         <div class="story-hint">
-                            <i class="fa-regular fa-compass"></i> 本故事融合了您在第 1 轮中答错的全部词汇，结合夸张反差情节加深神经联结。
+                            <i class="fa-regular fa-compass"></i> 默认采用<strong>语法精校写实引擎</strong>（100% 匹配英语原词搭配，适合课堂阅读）；也可点击上方「浏览器本地 AI 创作」免费运行 Qwen2.5-0.5B 小模型现场改写（无需 API Key，首次缓存约 350MB）。
                         </div>
                     </div>
 
@@ -649,11 +674,63 @@ dialogue 对话，对白"></textarea>
             </div>
         </div>
 
+        <!-- Modal: Standalone Story Studio Preview -->
+        <div class="modal-backdrop" id="modalStoryStudio" style="display: none;">
+            <div class="modal-dialog modal-story-dialog">
+                <div class="modal-title-row">
+                    <div>
+                        <span class="story-tag">词汇故事工坊 · Story Studio</span>
+                        <h3 id="studioStoryTitle" style="margin-top: 4px;">语境写实短篇</h3>
+                    </div>
+                    <button class="btn-close" id="btnCloseStoryStudio">&times;</button>
+                </div>
+                <div class="studio-toolbar">
+                    <span class="story-engine-badge" id="studioEngineBadge">语法精校故事引擎 · 即时生成</span>
+                    <div class="story-tools">
+                        <select id="studioThemeSelect" class="form-select story-theme-select">
+                            <option value="journalism">校园新闻调查</option>
+                            <option value="debate">辩论赛决赛</option>
+                            <option value="harbor">北港档案谜案</option>
+                            <option value="startup">青年科创路演</option>
+                            <option value="memoir">老城秋日手记</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" id="btnStudioShuffle">
+                            <i class="fa-solid fa-shuffle"></i> 换 5 个词
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="btnStudioAi">
+                            <i class="fa-solid fa-microchip"></i> 浏览器本地 AI 创作
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnStudioSpeak">
+                            <i class="fa-solid fa-volume-high"></i> 朗读英文
+                        </button>
+                        <button class="btn btn-secondary btn-sm" id="btnStudioCopy">
+                            <i class="fa-regular fa-copy"></i> 复制
+                        </button>
+                    </div>
+                </div>
+                <div class="story-ai-progress" id="studioAiProgressWrap" style="display: none;">
+                    <div class="story-ai-progress-top">
+                        <span id="studioAiProgressText">正在准备本地小模型 Qwen2.5-0.5B...</span>
+                        <strong id="studioAiProgressPct">0%</strong>
+                    </div>
+                    <div class="story-ai-bar">
+                        <div class="story-ai-bar-fill" id="studioAiProgressFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="studio-word-chips" id="studioWordChips"></div>
+                <div class="story-body studio-story-body" id="studioStoryContent"></div>
+                <div class="story-hint" style="margin-top: 12px;">
+                    <i class="fa-regular fa-compass"></i> 浏览器本地 AI 运行 <strong>Qwen2.5-0.5B-Instruct (WebGPU/WASM)</strong>，无需任何 Gemini API Key；首次加载约 350MB 后永久缓存在本地浏览器中。
+                </div>
+            </div>
+        </div>
+
         <!-- Global Toast Notifications -->
         <div class="toast-stack" id="toastContainer"></div>
     </div>
 
     <!-- Scripts -->
+    <script src="/static/js/story_ai.js?v=1"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/vocab.js"></script>
     <script src="/static/js/quiz.js"></script>

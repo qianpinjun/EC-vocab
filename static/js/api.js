@@ -207,6 +207,14 @@ const API = {
                 })
             });
         }
+    },
+    story: {
+        async generate(words, themeId = null) {
+            return await fetchJson('/story/generate', {
+                method: 'POST',
+                body: JSON.stringify({ words, theme_id: themeId })
+            });
+        }
     }
 };
 

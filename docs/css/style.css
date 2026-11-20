@@ -1740,3 +1740,112 @@ body {
     border-left: 2px solid #cbd5e1;
     padding-left: 0.75rem;
 }
+
+/* ==================== Hybrid Story Studio & Local AI UI ==================== */
+.story-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.35rem;
+}
+
+.story-engine-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.story-engine-badge.is-ai {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.story-theme-select {
+    padding: 0.36rem 0.65rem !important;
+    font-size: 0.82rem !important;
+    height: auto !important;
+    min-width: 138px;
+    border-radius: var(--radius-sm);
+}
+
+.story-ai-progress {
+    margin: 0.85rem 0 1rem;
+    padding: 0.75rem 1rem;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: var(--radius-md);
+}
+
+.story-ai-progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.82rem;
+    color: #0369a1;
+    margin-bottom: 0.45rem;
+}
+
+.story-ai-bar {
+    height: 8px;
+    background: #e0f2fe;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.story-ai-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #10b981);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.modal-story-dialog {
+    max-width: 780px !important;
+    width: 94% !important;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.studio-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 0.85rem;
+}
+
+.studio-word-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.9rem;
+}
+
+.studio-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.22rem 0.65rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-size: 0.82rem;
+}
+
+.studio-story-body {
+    max-height: 46vh;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}

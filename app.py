@@ -269,6 +269,18 @@ def api_round_complete():
     })
 
 
+@app.route('/api/story/generate', methods=['POST'])
+@login_required
+def api_generate_story():
+    data = request.get_json() or {}
+    words = data.get('words', [])
+    theme_id = data.get('theme_id')
+    if not words:
+        return jsonify({'success': False, 'error': '没有可用于生成故事的词汇'}), 400
+    story_data = generate_absurd_story(words, theme_id=theme_id)
+    return jsonify({'success': True, 'story': story_data})
+
+
 @app.route('/api/quiz/next_round', methods=['POST'])
 @login_required
 def api_next_round():

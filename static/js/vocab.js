@@ -4,9 +4,14 @@ const VocabModule = {
     currentListId: null,
     lists: [],
     words: [],
+    studioWords: [],
+    studioStoryText: '',
+    studioStoryEnglish: '',
+    studioAiBusy: false,
 
     init() {
         this.bindEvents();
+        this.bindStoryStudioEvents();
     },
 
     reset() {
@@ -337,6 +342,188 @@ const VocabModule = {
             } catch (e) {
                 showToast(e.message, 'error');
             }
+        }
+    },
+
+    bindStoryStudioEvents() {
+        const modal = document.getElementById('modalStoryStudio');
+        const btnOpen = document.getElementById('btnOpenStoryStudio');
+        const btnClose = document.getElementById('btnCloseStoryStudio');
+        const themeSel = document.getElementById('studioThemeSelect');
+        const btnShuffle = document.getElementById('btnStudioShuffle');
+        const btnAi = document.getElementById('btnStudioAi');
+        const btnSpeak = document.getElementById('btnStudioSpeak');
+        const btnCopy = document.getElementById('btnStudioCopy');
+
+        if (btnOpen) {
+            btnOpen.addEventListener('click', () => this.openStoryStudio());
+        }
+        if (btnClose && modal) {
+            btnClose.addEventListener('click', () => {
+                modal.style.display = 'none';
+                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            });
+        }
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                }
+            });
+        }
+        if (themeSel) {
+            themeSel.addEventListener('change', () => this.renderStudioCurated(themeSel.value));
+        }
+        if (btnShuffle) {
+            btnShuffle.addEventListener('click', () => {
+                this.pickStudioWords(5);
+                this.renderStudioCurated(themeSel ? themeSel.value : 'journalism');
+            });
+        }
+        if (btnAi) {
+            btnAi.addEventListener('click', () => this.runStudioLocalAI());
+        }
+        if (btnSpeak) {
+            btnSpeak.addEventListener('click', () => {
+                if (!('speechSynthesis' in window)) {
+                    showToast('当前浏览器不支持语音朗读', 'warning');
+                    return;
+                }
+                window.speechSynthesis.cancel();
+                if (!this.studioStoryEnglish) return;
+                const u = new SpeechSynthesisUtterance(this.studioStoryEnglish);
+                u.lang = 'en-US';
+                u.rate = 0.94;
+                window.speechSynthesis.speak(u);
+                showToast('正在朗读英文故事...', 'info');
+            });
+        }
+        if (btnCopy) {
+            btnCopy.addEventListener('click', () => {
+                if (!this.studioStoryText) return;
+                navigator.clipboard.writeText(this.studioStoryText)
+                    .then(() => showToast('故事全文已复制到剪贴板', 'success'))
+                    .catch(() => showToast('复制失败，请手动复制', 'warning'));
+            });
+        }
+    },
+
+    pickStudioWords(count = 5) {
+        if (!this.words || !this.words.length) {
+            this.studioWords = [];
+            return;
+        }
+        const shuffled = this.words.slice().sort(() => Math.random() - 0.5);
+        this.studioWords = shuffled.slice(0, Math.min(count, shuffled.length)).map(w => ({
+            word: w.word,
+            meaning: w.meaning
+        }));
+    },
+
+    openStoryStudio() {
+        if (!this.words || !this.words.length) {
+            showToast('当前单元还没有词汇，请先添加词汇', 'warning');
+            return;
+        }
+        const modal = document.getElementById('modalStoryStudio');
+        const themeSel = document.getElementById('studioThemeSelect');
+        if (!modal) return;
+        this.pickStudioWords(5);
+        this.renderStudioCurated(themeSel ? themeSel.value : 'journalism');
+        modal.style.display = 'flex';
+    },
+
+    renderStudioStory(story) {
+        if (!story) return;
+        const titleEl = document.getElementById('studioStoryTitle');
+        const badgeEl = document.getElementById('studioEngineBadge');
+        const chipsEl = document.getElementById('studioWordChips');
+        const boxEl = document.getElementById('studioStoryContent');
+        const themeSel = document.getElementById('studioThemeSelect');
+
+        if (titleEl) titleEl.textContent = story.title || '语境写实短篇';
+        if (themeSel && story.theme_id) themeSel.value = story.theme_id;
+        if (badgeEl) {
+            badgeEl.textContent = story.engine_label || '语法精校故事引擎 · 即时生成';
+            badgeEl.classList.toggle('is-ai', story.engine === 'local_ai');
+        }
+        if (chipsEl) {
+            chipsEl.innerHTML = this.studioWords
+                .map(w => `<span class="studio-chip"><strong>${escapeHtml(w.word)}</strong></span>`)
+                .join('');
+        }
+        if (boxEl) {
+            boxEl.innerHTML = '';
+            let rawAll = '';
+            let rawEn = '';
+            (story.paragraphs || []).forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'story-para';
+                div.innerHTML = `
+                    <div class="story-en-line">${p.html_en || escapeHtml(p.en)}</div>
+                    <div class="story-cn-line">${p.html_cn || escapeHtml(p.cn)}</div>
+                `;
+                boxEl.appendChild(div);
+                rawAll += p.en + '\n' + (p.cn || '') + '\n\n';
+                rawEn += p.en + ' ';
+            });
+            this.studioStoryText = `${story.title}\n\n${rawAll.trim()}`;
+            this.studioStoryEnglish = rawEn.trim();
+        }
+    },
+
+    renderStudioCurated(themeId) {
+        if (!this.studioWords.length || !window.StoryStudio) return;
+        const story = window.StoryStudio.generateCurated(this.studioWords, themeId);
+        this.renderStudioStory(story);
+    },
+
+    async runStudioLocalAI() {
+        if (this.studioAiBusy || !this.studioWords.length) return;
+        if (!window.StoryStudio || typeof window.StoryStudio.generateWithLocalAI !== 'function') {
+            showToast('本地 AI 模块未就绪', 'error');
+            return;
+        }
+        const btnAi = document.getElementById('btnStudioAi');
+        const progWrap = document.getElementById('studioAiProgressWrap');
+        const progText = document.getElementById('studioAiProgressText');
+        const progPct = document.getElementById('studioAiProgressPct');
+        const progFill = document.getElementById('studioAiProgressFill');
+        const themeSel = document.getElementById('studioThemeSelect');
+        const themeId = themeSel ? themeSel.value : 'journalism';
+
+        this.studioAiBusy = true;
+        if (btnAi) {
+            btnAi.disabled = true;
+            btnAi.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 本地 AI 创作中...';
+        }
+        if (progWrap) progWrap.style.display = 'block';
+
+        try {
+            const aiStory = await window.StoryStudio.generateWithLocalAI(
+                this.studioWords,
+                themeId,
+                ({ pct, text }) => {
+                    if (progText && text) progText.textContent = text;
+                    if (progPct && typeof pct === 'number') progPct.textContent = `${pct}%`;
+                    if (progFill && typeof pct === 'number') progFill.style.width = `${pct}%`;
+                }
+            );
+            if (aiStory) {
+                this.renderStudioStory(aiStory);
+                showToast('浏览器本地 AI 故事创作完成！', 'success');
+            }
+        } catch (err) {
+            console.error('Studio Local AI error:', err);
+            showToast('本地 AI 加载失败（保留语法精校版）：' + (err.message || err), 'warning');
+        } finally {
+            this.studioAiBusy = false;
+            if (btnAi) {
+                btnAi.disabled = false;
+                btnAi.innerHTML = '<i class="fa-solid fa-microchip"></i> 浏览器本地 AI 创作';
+            }
+            if (progWrap) progWrap.style.display = 'none';
         }
     }
 };
