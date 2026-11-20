@@ -74,15 +74,15 @@ const GrammarVideoPlayer = {
         const dotsWrap = document.getElementById('gVideoDots');
         const stepCounter = document.getElementById('gVideoStepText');
 
-        // Try loading pre-downloaded Gemini MP4 video first
+        // Try loading pre-rendered kinetic 24fps MP4 video first
         if (videoId && realVideo) {
-            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4`;
+            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=2`;
             try {
                 const headRes = await fetch(mp4Url, { method: 'HEAD' });
                 if (headRes.ok) {
                     if (fallbackWrap) fallbackWrap.style.display = 'none';
                     if (dotsWrap) dotsWrap.style.display = 'none';
-                    if (stepCounter) stepCounter.textContent = '720p MP4';
+                    if (stepCounter) stepCounter.textContent = '24fps MP4 · AI 语音';
                     realVideo.style.display = 'block';
                     realVideo.src = mp4Url;
                     realVideo.play().catch(() => {});
