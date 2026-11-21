@@ -18,13 +18,6 @@ const LeaderboardModule = {
         if (btnRefresh) {
             btnRefresh.addEventListener('click', () => this.loadLeaderboard(this.currentSort, true));
         }
-
-        const btnPortalRank = document.getElementById('portalBtnRanking');
-        if (btnPortalRank) {
-            btnPortalRank.addEventListener('click', () => {
-                if (typeof switchMode === 'function') switchMode('ranking');
-            });
-        }
     },
 
     escape(str) {

@@ -57,13 +57,19 @@ function switchMode(mode, subTab = 'vocab') {
 function initPortal() {
     const btnVocab = document.getElementById('portalBtnVocab');
     const btnGrammar = document.getElementById('portalBtnGrammar');
+    const btnRanking = document.getElementById('portalBtnRanking');
     if (btnVocab) {
         btnVocab.addEventListener('click', () => switchMode('vocab', 'vocab'));
     }
     if (btnGrammar) {
         btnGrammar.addEventListener('click', () => switchMode('grammar'));
     }
+    if (btnRanking) {
+        btnRanking.addEventListener('click', () => switchMode('ranking'));
+    }
 }
+
+window.switchMode = switchMode;
 
 function setAuthenticatedUI(user) {
     const authGate = document.getElementById('authGate');

@@ -927,22 +927,45 @@ const API = {
             const me = (getSessionUsername() || '').toLowerCase();
             let rawUsers = [];
 
+            // Merge cloud users (Supabase) with any local accounts so current user always appears
+            const mergedMap = new Map();
             if (getCloudConfig()) {
                 try {
                     const rows = await supabaseFetch('ec_users?select=username,display_name,data,updated_at&limit=200', { method: 'GET' });
-                    if (Array.isArray(rows)) rawUsers = rows;
-                } catch (e) {}
+                    if (Array.isArray(rows)) {
+                        for (const r of rows) {
+                            const k = String(r.username || '').toLowerCase();
+                            if (k) mergedMap.set(k, r);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Leaderboard cloud fetch failed, using local accounts:', e);
+                }
             }
 
-            if (!rawUsers.length) {
-                const accounts = loadLocalAccounts();
-                rawUsers = Object.keys(accounts).map(k => ({
-                    username: k,
-                    display_name: accounts[k].username || k,
-                    data: accounts[k].data || null,
-                    updated_at: ''
-                }));
+            const accounts = loadLocalAccounts();
+            for (const k of Object.keys(accounts)) {
+                const localAcc = accounts[k];
+                const localData = localAcc && localAcc.data ? localAcc.data : null;
+                if (!mergedMap.has(k)) {
+                    mergedMap.set(k, {
+                        username: k,
+                        display_name: localAcc.username || k,
+                        data: localData,
+                        updated_at: (localData && localData.stats && localData.stats.last_active_at) || ''
+                    });
+                } else if (k === me && localData && localData.stats) {
+                    // Prefer the current user's freshest local stats if cloud write is still settling
+                    const existing = mergedMap.get(k);
+                    const exStats = (existing.data && existing.data.stats) || {};
+                    const locTotal = Number(localData.stats.vocab_reviewed || 0) + Number(localData.stats.grammar_completed || 0);
+                    const exTotal = Number(exStats.vocab_reviewed || 0) + Number(exStats.grammar_completed || 0);
+                    if (locTotal > exTotal) {
+                        mergedMap.set(k, { ...existing, data: localData });
+                    }
+                }
             }
+            rawUsers = Array.from(mergedMap.values());
 
             const entries = rawUsers.map(u => {
                 const d = (u && u.data && typeof u.data === 'object') ? u.data : {};
