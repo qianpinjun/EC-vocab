@@ -3,36 +3,38 @@
    ========================================================================== */
 
 :root {
-    --bg-surface: #f9fafb;
-    --card-surface: #ffffff;
-    --border-subtle: #e5e7eb;
-    --border-strong: #d1d5db;
+    --bg-surface: #f5f2eb;
+    --card-surface: #fffefb;
+    --border-subtle: #e2dbce;
+    --border-strong: #c8bfb0;
     
-    --text-primary: #111827;
-    --text-secondary: #4b5563;
-    --text-muted: #6b7280;
+    --text-primary: #1c1917;
+    --text-secondary: #44403c;
+    --text-muted: #78716c;
     
-    --accent-primary: #1f2937;
-    --accent-primary-hover: #111827;
-    --accent-blue: #2563eb;
-    --accent-blue-hover: #1d4ed8;
+    --accent-primary: #1b4332;
+    --accent-primary-hover: #133124;
+    --accent-blue: #1b4332;
+    --accent-blue-hover: #133124;
+    --accent-brass: #9a6700;
+    --accent-crimson: #9b2c2c;
     
-    --state-success: #059669;
-    --state-success-bg: #ecfdf5;
-    --state-success-border: #a7f3d0;
+    --state-success: #1b4332;
+    --state-success-bg: #eef7f2;
+    --state-success-border: #b7dec9;
     
-    --state-error: #dc2626;
-    --state-error-bg: #fef2f2;
-    --state-error-border: #fecaca;
+    --state-error: #9b2c2c;
+    --state-error-bg: #fdf2f2;
+    --state-error-border: #efc6c6;
     
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Noto Sans SC", sans-serif;
     --font-serif: 'Noto Serif SC', Georgia, Cambria, "Times New Roman", serif;
     
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --shadow-subtle: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-    --shadow-card: 0 2px 8px -1px rgba(0, 0, 0, 0.06), 0 1px 4px -1px rgba(0, 0, 0, 0.03);
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --shadow-subtle: 0 1px 0 rgba(28, 25, 23, 0.04);
+    --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05);
 }
 
 * {
@@ -1848,4 +1850,515 @@ body {
     max-height: 46vh;
     overflow-y: auto;
     padding-right: 0.25rem;
+}
+
+/* ==================== Editorial Academic Theme (Non-AI-Slop) & School Ranking ==================== */
+h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+}
+
+.app-header {
+    background: #fffefb;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.brand-icon {
+    background: var(--text-primary);
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+}
+
+/* Clean Editorial Underline Nav instead of generic gray SaaS pill container */
+#mainNav.nav-segment {
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 0.25rem;
+}
+
+#mainNav .segment-btn {
+    border-radius: 0;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    background: transparent;
+    box-shadow: none;
+}
+
+#mainNav .segment-btn:hover {
+    color: var(--text-primary);
+    border-bottom-color: var(--border-strong);
+}
+
+#mainNav .segment-btn.active {
+    background: transparent;
+    color: var(--accent-primary);
+    font-weight: 700;
+    border-bottom: 2px solid var(--accent-primary);
+    box-shadow: none;
+}
+
+/* Crisp Auth Gate */
+.auth-gate-wrap {
+    max-width: 440px;
+    width: 100%;
+    margin: 3.25rem auto;
+    padding: 0 1rem;
+}
+
+.auth-card {
+    padding: 2rem 1.85rem !important;
+    border-top: 3px solid var(--accent-primary) !important;
+}
+
+.auth-masthead {
+    margin-bottom: 1.35rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.auth-masthead h2 {
+    margin: 0.3rem 0 0.35rem;
+    font-size: 1.45rem;
+}
+
+.auth-tabs {
+    width: 100%;
+    margin-bottom: 1.25rem;
+    background: #f0ece2 !important;
+}
+
+.editorial-kicker {
+    display: inline-block;
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-brass);
+}
+
+/* Editorial Study Desk Portal */
+.portal-wrap {
+    padding-top: 0.5rem;
+}
+
+.portal-masthead {
+    margin-bottom: 1.4rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--border-strong);
+}
+
+.portal-masthead h2 {
+    font-size: 1.85rem;
+    margin: 0.25rem 0 0.35rem;
+    color: var(--text-primary);
+}
+
+/* Live Personal Study Ledger */
+.study-ledger-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--card-surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.6rem;
+    overflow: hidden;
+}
+
+.ledger-cell {
+    padding: 1rem 1.25rem;
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ledger-cell:last-child {
+    border-right: none;
+}
+
+.ledger-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+.ledger-value {
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+}
+
+.ledger-value.accent {
+    color: var(--accent-primary);
+}
+
+.ledger-rank-cell {
+    cursor: pointer;
+    background: #f9f6ee;
+    transition: background 0.15s ease;
+}
+
+.ledger-rank-cell:hover {
+    background: #f1ebdc;
+}
+
+/* 3-Column Editorial Module Index */
+.portal-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.15rem;
+}
+
+.portal-grid-3 .portal-card {
+    background: var(--card-surface);
+    border: 1px solid var(--border-strong);
+    border-top: 3px solid var(--text-primary);
+    border-radius: var(--radius-md);
+    padding: 1.45rem 1.4rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: left;
+    box-shadow: none;
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.portal-grid-3 .portal-card:hover {
+    transform: translateY(-2px);
+    border-top-color: var(--accent-primary);
+    background: #ffffff;
+    box-shadow: 0 6px 18px rgba(28, 25, 23, 0.06);
+}
+
+.portal-grid-3 .portal-card-rank {
+    border-top-color: var(--accent-brass);
+}
+
+.portal-num {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 0.65rem;
+}
+
+.portal-grid-3 .portal-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.55rem;
+    color: var(--text-primary);
+}
+
+.portal-grid-3 .portal-card p {
+    font-size: 0.88rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    margin-bottom: 1.15rem;
+    flex: 1;
+}
+
+.portal-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.portal-meta-row .portal-cta {
+    color: var(--accent-primary);
+    font-weight: 700;
+    margin-top: 0;
+}
+
+/* ==================== School Online Ranking Workspace ==================== */
+.lb-header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-strong);
+    margin-bottom: 1.25rem;
+}
+
+.lb-sort-bar {
+    display: inline-flex;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--card-surface);
+}
+
+.lb-sort-btn {
+    border: none;
+    background: transparent;
+    padding: 0.42rem 0.85rem;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-right: 1px solid var(--border-subtle);
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.lb-sort-btn:last-child {
+    border-right: none;
+}
+
+.lb-sort-btn.active {
+    background: var(--accent-primary);
+    color: #ffffff;
+}
+
+.lb-my-banner {
+    background: var(--card-surface);
+    border: 1px solid var(--border-strong);
+    border-left: 4px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.35rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.lb-me-kicker {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent-brass);
+    margin-bottom: 0.2rem;
+}
+
+.lb-me-headline {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.lb-me-headline strong {
+    font-family: var(--font-serif);
+    font-size: 1.55rem;
+    color: var(--text-primary);
+}
+
+.lb-me-headline span {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+}
+
+.lb-me-metrics {
+    display: flex;
+    gap: 1.35rem;
+    flex-wrap: wrap;
+}
+
+.lb-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+}
+
+.lb-metric span {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+.lb-metric strong {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-metric.accent strong {
+    color: var(--accent-primary);
+}
+
+.lb-podium-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.lb-podium-card {
+    background: var(--card-surface);
+    border: 1px solid var(--border-strong);
+    border-top: 3px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.2rem;
+}
+
+.lb-podium-card.rank-1 {
+    border-top-color: #b45309;
+    background: #fffdf7;
+}
+
+.lb-podium-card.rank-2 {
+    border-top-color: #64748b;
+}
+
+.lb-podium-card.rank-3 {
+    border-top-color: #9a5b32;
+}
+
+.lb-podium-card.is-me {
+    box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+.lb-podium-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.45rem;
+}
+
+.lb-rank-num {
+    font-family: var(--font-serif);
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-rank-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.lb-podium-name {
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.8rem;
+}
+
+.lb-podium-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.lb-podium-stats span {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.lb-podium-stats strong {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-table-card {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.lb-table th.lb-num-head,
+.lb-table td.lb-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-score-cell {
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.lb-time {
+    text-align: right;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.lb-row-me {
+    background: #eef7f2 !important;
+}
+
+.lb-me-tag {
+    display: inline-block;
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.4rem;
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 3px;
+    background: var(--accent-primary);
+    color: #ffffff;
+    vertical-align: middle;
+}
+
+.lb-rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: #f0ece2;
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-rank-badge.top-1 {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.lb-rank-badge.top-2 {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #94a3b8;
+}
+
+.lb-rank-badge.top-3 {
+    background: #ffedd5;
+    color: #9a3412;
+    border: 1px solid #fb923c;
+}
+
+.lb-footnote {
+    padding: 0.8rem 1.2rem;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: #faf8f3;
+}
+
+@media (max-width: 860px) {
+    .study-ledger-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .ledger-cell {
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .portal-grid-3,
+    .lb-podium-grid {
+        grid-template-columns: 1fr;
+    }
 }

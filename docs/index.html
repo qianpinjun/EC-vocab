@@ -12,55 +12,47 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- Minimalist Professional Header -->
+        <!-- Editorial School Masthead Header -->
         <header class="app-header">
             <div class="header-inner">
                 <div class="brand">
                     <div class="brand-icon">EC</div>
                     <div class="brand-text">
-                        <h1>EC 词汇情境研习</h1>
-                        <span class="brand-sub">Contextual Vocabulary & Precision Practice</span>
+                        <h1>EC Language Lab</h1>
+                        <span class="brand-sub">校园英语词汇与语法研习台</span>
                     </div>
                 </div>
 
                 <nav class="nav-segment" id="mainNav" style="display: none;">
-                    <button class="segment-btn active" data-mode="portal">
-                        <i class="fa-solid fa-house"></i> 首页
-                    </button>
-                    <button class="segment-btn" data-mode="vocab" data-tab="vocab">
-                        <i class="fa-solid fa-book-open"></i> 词汇清单
-                    </button>
-                    <button class="segment-btn" data-mode="vocab" data-tab="quiz">
-                        <i class="fa-solid fa-pen-to-square"></i> 词汇训练
-                    </button>
-                    <button class="segment-btn" data-mode="grammar">
-                        <i class="fa-solid fa-diagram-project"></i> 语法 Packet 4
-                    </button>
+                    <button class="segment-btn active" data-mode="portal">学习台</button>
+                    <button class="segment-btn" data-mode="vocab" data-tab="vocab">词汇库</button>
+                    <button class="segment-btn" data-mode="vocab" data-tab="quiz">词汇训练</button>
+                    <button class="segment-btn" data-mode="grammar">语法 Packet 4</button>
+                    <button class="segment-btn" data-mode="ranking">全校排行</button>
                 </nav>
 
                 <div id="userHeaderBox" style="display: none; align-items: center; gap: 10px;">
-                    <span class="count-pill"><i class="fa-solid fa-user"></i> <strong id="currentUsernameText"></strong></span>
-                    <button class="btn btn-secondary btn-sm" id="btnLogout">
-                        <i class="fa-solid fa-right-from-bracket"></i> 退出登录
-                    </button>
+                    <span class="count-pill"><strong id="currentUsernameText"></strong></span>
+                    <button class="btn btn-secondary btn-sm" id="btnLogout">退出</button>
                 </div>
             </div>
         </header>
 
-        <!-- Mandatory Auth Gate -->
-        <section id="authGate" style="max-width: 440px; width: 100%; margin: 3.5rem auto; padding: 0 1rem;">
-            <div class="content-card" style="padding: 1.75rem;">
-                <div style="text-align: center; margin-bottom: 1.25rem;">
-                    <h2 style="margin-bottom: 0.35rem;">欢迎使用 EC 词汇研习</h2>
-                    <p class="subtitle">请登录或注册账号，您的词库与修改将按账号独立保存</p>
+        <!-- Mandatory School Auth Gate -->
+        <section id="authGate" class="auth-gate-wrap">
+            <div class="content-card auth-card">
+                <div class="auth-masthead">
+                    <span class="editorial-kicker">ENGLISH COMPOSITION · STUDY PORTAL</span>
+                    <h2>EC 校园英语研习登录</h2>
+                    <p class="subtitle">登录个人账号以保存词库进度、语法练习记录并同步至全校排行榜</p>
                 </div>
 
-                <div class="nav-segment" style="width: 100%; margin-bottom: 1.25rem;">
+                <div class="nav-segment auth-tabs">
                     <button type="button" class="segment-btn active" id="tabBtnLogin" style="flex: 1; justify-content: center;">
-                        登录已有账号
+                        账号登录
                     </button>
                     <button type="button" class="segment-btn" id="tabBtnRegister" style="flex: 1; justify-content: center;">
-                        注册新账号
+                        新同学注册
                     </button>
                 </div>
 
@@ -74,25 +66,25 @@
                         <input type="password" id="loginPassword" class="form-input" placeholder="输入密码" required autocomplete="current-password">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
-                        登录进入词库
+                        进入学习台
                     </button>
                 </form>
 
                 <form id="formRegister" class="form-compact" style="display: none;">
                     <div class="field-group">
-                        <label>用户名</label>
-                        <input type="text" id="regUsername" class="form-input" placeholder="至少 2 个字符" required autocomplete="username">
+                        <label>姓名 / 用户名（将显示在全校排行榜）</label>
+                        <input type="text" id="regUsername" class="form-input" placeholder="例如：高二3班-林同学 或英文名" required autocomplete="username">
                     </div>
                     <div class="field-group">
                         <label>邮箱 (选填)</label>
-                        <input type="email" id="regEmail" class="form-input" placeholder="name@example.com" autocomplete="email">
+                        <input type="email" id="regEmail" class="form-input" placeholder="name@school.edu" autocomplete="email">
                     </div>
                     <div class="field-group">
                         <label>设置密码</label>
                         <input type="password" id="regPassword" class="form-input" placeholder="至少 4 个字符" required autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
-                        注册并登录
+                        注册并开始学习
                     </button>
                 </form>
             </div>
@@ -100,24 +92,64 @@
 
         <!-- Main Workspace -->
         <main class="main-container" id="mainWorkspace" style="display: none;">
-            <!-- Entry Mode Portal -->
+            <!-- Entry Mode Portal: Editorial School Study Desk -->
             <section id="modePortal" class="portal-wrap">
-                <div class="portal-hero">
-                    <h2>选择学习模块</h2>
-                    <p class="subtitle">进入现有词汇研习系统，或开启 Packet 4（Unit 14 定语从句）语法微课与双题型特训</p>
+                <div class="portal-masthead">
+                    <div>
+                        <span class="editorial-kicker">ACADEMIC WORKBENCH · EC STUDY DESK</span>
+                        <h2>英语研习学习台</h2>
+                        <p class="subtitle">涵盖 Packet 1–3 核心词汇四维盲测、写实故事工坊、Unit 14 定语从句精讲视频与全校刷题排行。</p>
+                    </div>
                 </div>
-                <div class="portal-grid">
+
+                <!-- Live Personal Study Ledger -->
+                <div class="study-ledger-bar">
+                    <div class="ledger-cell">
+                        <span class="ledger-label">已刷词汇题</span>
+                        <strong class="ledger-value" id="portalStatVocab">0</strong>
+                    </div>
+                    <div class="ledger-cell">
+                        <span class="ledger-label">已掌握词汇</span>
+                        <strong class="ledger-value" id="portalStatMastered">0</strong>
+                    </div>
+                    <div class="ledger-cell">
+                        <span class="ledger-label">已刷语法题</span>
+                        <strong class="ledger-value" id="portalStatGrammar">0</strong>
+                    </div>
+                    <div class="ledger-cell ledger-rank-cell" id="portalLedgerRankJump" onclick="switchMode('ranking')" title="查看全校完整排行榜">
+                        <span class="ledger-label">全校当前排名</span>
+                        <strong class="ledger-value accent" id="portalStatRank">—</strong>
+                    </div>
+                </div>
+
+                <!-- 3-Column Editorial Module Index -->
+                <div class="portal-grid portal-grid-3">
                     <div class="portal-card" id="portalBtnVocab">
-                        <div class="portal-icon"><i class="fa-solid fa-book-open"></i></div>
-                        <h3>词汇研习 (Vocabulary Studio)</h3>
-                        <p>管理您的独立词库单元（Packet 1–3 + 逻辑谬误）、进行情境盲测、生成错词强化故事与循环加词挑战。</p>
-                        <span class="portal-cta">进入词汇模块 <i class="fa-solid fa-arrow-right"></i></span>
+                        <div class="portal-num">01 / VOCABULARY</div>
+                        <h3>词汇研习与四维盲测</h3>
+                        <p>内置 137 个核心词汇 × 4 套不同题型变体（共 548 题防重复轮换），支持写实语境故事与浏览器本地小模型 AI 创作。</p>
+                        <div class="portal-meta-row">
+                            <span>Packet 1–3 + 逻辑谬误</span>
+                            <span class="portal-cta">进入模块 &rarr;</span>
+                        </div>
                     </div>
                     <div class="portal-card" id="portalBtnGrammar">
-                        <div class="portal-icon grammar"><i class="fa-solid fa-diagram-project"></i></div>
-                        <h3>语法特训 (Grammar · Packet 4)</h3>
-                        <p>梳理 Unit 14 定语从句 6 大核心知识点：Quick Reminder 动态微视频、多项对比选择与合并写句双题型、错题思维导图与视频讲解。</p>
-                        <span class="portal-cta">进入语法模块 <i class="fa-solid fa-arrow-right"></i></span>
+                        <div class="portal-num">02 / GRAMMAR · PACKET 4</div>
+                        <h3>定语从句精讲与特训</h3>
+                        <p>梳理 Unit 14 六大核心考点，配套 40 支 24fps 动态精讲视频、多项对比选择与合并写句双题型及错题思维导图。</p>
+                        <div class="portal-meta-row">
+                            <span>6 大考点 · 40 支微课</span>
+                            <span class="portal-cta">进入模块 &rarr;</span>
+                        </div>
+                    </div>
+                    <div class="portal-card portal-card-rank" id="portalBtnRanking">
+                        <div class="portal-num">03 / HONOR ROLL</div>
+                        <h3>全校在线刷题排行榜</h3>
+                        <p>实时汇总每位同学已刷词汇题数、已掌握词量、已刷语法题数与综合正确率，按总榜、词汇榜或语法榜随时对比激励。</p>
+                        <div class="portal-meta-row">
+                            <span>实时在线同步</span>
+                            <span class="portal-cta">查看榜单 &rarr;</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -591,6 +623,55 @@ dialogue 对话，对白"></textarea>
                     </div>
                 </section>
             </div>
+
+            <!-- Online School Ranking Workspace -->
+            <div id="leaderboardWorkspace" style="display: none;">
+                <div class="panel-header lb-header">
+                    <div class="header-left">
+                        <span class="editorial-kicker">SCHOOL HONOR ROLL · 实时在线榜单</span>
+                        <h2>全校刷题排行榜</h2>
+                        <p class="subtitle">公开透明记录每位同学已刷词汇题数、已掌握词量与已刷语法题数 · 当前共有 <strong id="lbTotalStudents">0 位同学</strong> 参与排名</p>
+                    </div>
+                    <div class="header-right">
+                        <div class="lb-sort-bar" id="lbSortBar">
+                            <button type="button" class="lb-sort-btn active" data-sort="total">综合总榜</button>
+                            <button type="button" class="lb-sort-btn" data-sort="vocab">词汇刷题榜</button>
+                            <button type="button" class="lb-sort-btn" data-sort="grammar">语法刷题榜</button>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnRefreshLeaderboard">刷新数据</button>
+                    </div>
+                </div>
+
+                <!-- My Standing Summary Strip -->
+                <div class="lb-my-banner" id="lbMyRankBanner"></div>
+
+                <!-- Top 3 Editorial Podium -->
+                <div class="lb-podium-grid" id="lbPodiumGrid"></div>
+
+                <!-- Full School Ranking Table -->
+                <div class="content-card lb-table-card">
+                    <div class="table-responsive">
+                        <table class="data-table lb-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 72px;">排名</th>
+                                    <th>同学</th>
+                                    <th class="lb-num-head">已刷词汇题</th>
+                                    <th class="lb-num-head">已掌握词</th>
+                                    <th class="lb-num-head">已刷语法题</th>
+                                    <th class="lb-num-head">综合正确率</th>
+                                    <th class="lb-num-head">综合积分</th>
+                                    <th style="text-align:right;">最近学习</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lbTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="lb-footnote">
+                        积分规则：每刷 1 道词汇题 +2 分（答对再 +1）、每掌握 1 个词汇 +4 分、每刷 1 道语法题 +3 分（答对再 +2），兼顾勤奋度与准确率。
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Reusable Animated Video Player Shell -->
@@ -739,6 +820,7 @@ dialogue 对话，对白"></textarea>
     <script src="./js/quiz.js"></script>
     <script src="./js/grammar_data.js"></script>
     <script src="./js/grammar.js"></script>
+    <script src="./js/leaderboard.js?v=1"></script>
     <script src="./js/main.js"></script>
 </body>
 </html>

@@ -782,8 +782,8 @@ const API = {
             return { success: true, round_number: 1, total_questions: questions.length, questions };
         },
         async submitAnswer(wordId, isCorrect) {
+            const store = loadUserStore();
             if (wordId) {
-                const store = loadUserStore();
                 const target = store.words.find(w => w.id === Number(wordId));
                 if (target) {
                     if (isCorrect) {
@@ -793,9 +793,13 @@ const API = {
                         target.wrong_count = (target.wrong_count || 0) + 1;
                         target.mastered = 0;
                     }
-                    await saveUserStore(store);
                 }
             }
+            if (!store.stats) store.stats = { vocab_reviewed: 0, vocab_correct: 0, grammar_completed: 0, grammar_correct: 0, grammar_unique_ids: [] };
+            store.stats.vocab_reviewed = (store.stats.vocab_reviewed || 0) + 1;
+            if (isCorrect) store.stats.vocab_correct = (store.stats.vocab_correct || 0) + 1;
+            store.stats.last_active_at = new Date().toISOString();
+            await saveUserStore(store);
             return { success: true, is_correct: Boolean(isCorrect) };
         },
         async roundComplete(roundNumber, mistakes) {
@@ -878,6 +882,122 @@ const API = {
             const story = generateAbsurdStory(words, themeId);
             if (!story) throw new Error('没有可用于生成故事的词汇');
             return { success: true, story };
+        }
+    },
+    grammar: {
+        async record(questionId, topicId, isCorrect) {
+            const store = loadUserStore();
+            if (!store.stats) store.stats = { vocab_reviewed: 0, vocab_correct: 0, grammar_completed: 0, grammar_correct: 0, grammar_unique_ids: [] };
+            store.stats.grammar_completed = (store.stats.grammar_completed || 0) + 1;
+            if (isCorrect) store.stats.grammar_correct = (store.stats.grammar_correct || 0) + 1;
+            if (questionId) {
+                const uniq = new Set(store.stats.grammar_unique_ids || []);
+                uniq.add(String(questionId));
+                store.stats.grammar_unique_ids = Array.from(uniq);
+            }
+            store.stats.last_active_at = new Date().toISOString();
+            await saveUserStore(store);
+            const lb = await API.leaderboard.get('total');
+            return { success: true, summary: lb.my_rank || null };
+        }
+    },
+    stats: {
+        async me() {
+            const lb = await API.leaderboard.get('total');
+            const summary = lb.my_rank ? { ...lb.my_rank, total_students: lb.total_students } : {
+                username: getSessionUsername() || '',
+                rank: null,
+                total_students: lb.total_students,
+                vocab_reviewed: 0,
+                vocab_correct: 0,
+                vocab_mastered: 0,
+                grammar_completed: 0,
+                grammar_correct: 0,
+                grammar_unique: 0,
+                accuracy_pct: 0,
+                total_score: 0,
+                last_active_at: ''
+            };
+            return { success: true, summary };
+        }
+    },
+    leaderboard: {
+        async get(sortBy = 'total') {
+            const sortKey = ['total', 'vocab', 'grammar'].includes(sortBy) ? sortBy : 'total';
+            const me = (getSessionUsername() || '').toLowerCase();
+            let rawUsers = [];
+
+            if (getCloudConfig()) {
+                try {
+                    const rows = await supabaseFetch('ec_users?select=username,display_name,data,updated_at&limit=200', { method: 'GET' });
+                    if (Array.isArray(rows)) rawUsers = rows;
+                } catch (e) {}
+            }
+
+            if (!rawUsers.length) {
+                const accounts = loadLocalAccounts();
+                rawUsers = Object.keys(accounts).map(k => ({
+                    username: k,
+                    display_name: accounts[k].username || k,
+                    data: accounts[k].data || null,
+                    updated_at: ''
+                }));
+            }
+
+            const entries = rawUsers.map(u => {
+                const d = (u && u.data && typeof u.data === 'object') ? u.data : {};
+                const words = Array.isArray(d.words) ? d.words : [];
+                const st = (d.stats && typeof d.stats === 'object') ? d.stats : {};
+                const wordAttempts = words.reduce((acc, w) => acc + (w.correct_count || 0) + (w.wrong_count || 0), 0);
+                const wordCorrect = words.reduce((acc, w) => acc + (w.correct_count || 0), 0);
+                const masteredSet = new Set(words.filter(w => w.mastered).map(w => String(w.word || '').toLowerCase()));
+
+                const vr = Math.max(Number(st.vocab_reviewed || 0), wordAttempts);
+                const vc = Math.max(Number(st.vocab_correct || 0), wordCorrect);
+                const gc = Number(st.grammar_completed || 0);
+                const gok = Number(st.grammar_correct || 0);
+                const gUniq = Array.isArray(st.grammar_unique_ids) ? st.grammar_unique_ids.length : 0;
+                const totalAtt = vr + gc;
+                const totalOk = vc + gok;
+                const accPct = totalAtt > 0 ? Math.round((totalOk / totalAtt) * 100) : 0;
+                const score = vr * 2 + vc + gc * 3 + gok * 2 + masteredSet.size * 4;
+
+                return {
+                    username: u.display_name || u.username || 'Student',
+                    is_me: String(u.username || '').toLowerCase() === me,
+                    vocab_reviewed: vr,
+                    vocab_correct: vc,
+                    vocab_mastered: masteredSet.size,
+                    grammar_completed: gc,
+                    grammar_correct: gok,
+                    grammar_unique: gUniq,
+                    accuracy_pct: accPct,
+                    total_score: score,
+                    last_active_at: st.last_active_at || u.updated_at || ''
+                };
+            });
+
+            if (sortKey === 'vocab') {
+                entries.sort((a, b) => (b.vocab_reviewed - a.vocab_reviewed) || (b.vocab_mastered - a.vocab_mastered) || (b.total_score - a.total_score));
+            } else if (sortKey === 'grammar') {
+                entries.sort((a, b) => (b.grammar_completed - a.grammar_completed) || (b.grammar_unique - a.grammar_unique) || (b.total_score - a.total_score));
+            } else {
+                entries.sort((a, b) => (b.total_score - a.total_score) || ((b.vocab_reviewed + b.grammar_completed) - (a.vocab_reviewed + a.grammar_completed)));
+            }
+
+            let myRank = null;
+            entries.forEach((item, idx) => {
+                item.rank = idx + 1;
+                if (item.is_me) myRank = item;
+            });
+
+            return {
+                success: true,
+                sort: sortKey,
+                total_students: entries.length,
+                my_rank: myRank,
+                entries: entries.slice(0, 100)
+            };
         }
     }
 };

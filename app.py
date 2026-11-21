@@ -1,17 +1,29 @@
 import re
 import random
+from datetime import timedelta
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, session
-from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+try:
+    from flask_cors import CORS
+except ImportError:
+    CORS = None
 from config import SECRET_KEY, PORT, HOST, DEBUG
 from database import init_db
-from models import UserModel, VocabListModel, WordModel
+from models import UserModel, VocabListModel, WordModel, StatsModel
 from question_engine import generate_quiz_round, DEFAULT_DISTRACTORS
 from story_engine import generate_absurd_story
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-CORS(app, supports_credentials=True)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=14),
+)
+if CORS:
+    CORS(app, supports_credentials=True)
 
 # Initialize database tables on startup
 init_db()
@@ -46,6 +58,7 @@ def api_auth_register():
     email = data.get('email', '').strip()
     try:
         user = UserModel.register(username, password, email)
+        session.permanent = True
         session['user_id'] = user['id']
         session['username'] = user['username']
         return jsonify({
@@ -66,6 +79,7 @@ def api_auth_login():
     user = UserModel.authenticate(username, password)
     if not user:
         return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
+    session.permanent = True
     session['user_id'] = user['id']
     session['username'] = user['username']
     return jsonify({
@@ -232,12 +246,14 @@ def api_quiz_start():
 @app.route('/api/quiz/submit_answer', methods=['POST'])
 @login_required
 def api_quiz_submit_answer():
+    user_id = session['user_id']
     data = request.get_json() or {}
     word_id = data.get('word_id')
     is_correct = bool(data.get('is_correct'))
 
     if word_id:
-        WordModel.record_answer_stat(session['user_id'], word_id, is_correct)
+        WordModel.record_answer_stat(user_id, word_id, is_correct)
+    StatsModel.record_vocab_attempt(user_id, is_correct)
 
     return jsonify({
         'success': True,
@@ -345,6 +361,45 @@ def api_next_round():
         'penalty_added_count': len(extra_words),
         'questions': questions
     })
+
+
+# ----------------- Grammar Progress & School Ranking Endpoints -----------------
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    lb = StatsModel.get_leaderboard(sort_by='total', limit=1)
+    return jsonify({
+        'status': 'ok',
+        'mode': 'server',
+        'registered_students': lb['total_students'],
+    })
+
+
+@app.route('/api/grammar/record', methods=['POST'])
+@login_required
+def api_grammar_record():
+    user_id = session['user_id']
+    data = request.get_json() or {}
+    question_id = data.get('question_id', '')
+    topic_id = data.get('topic_id', '')
+    is_correct = bool(data.get('is_correct'))
+    StatsModel.record_grammar_attempt(user_id, question_id, topic_id, is_correct)
+    summary = StatsModel.get_user_summary(user_id)
+    return jsonify({'success': True, 'summary': summary})
+
+
+@app.route('/api/stats/me', methods=['GET'])
+@login_required
+def api_stats_me():
+    summary = StatsModel.get_user_summary(session['user_id'])
+    return jsonify({'success': True, 'summary': summary})
+
+
+@app.route('/api/leaderboard', methods=['GET'])
+@login_required
+def api_leaderboard():
+    sort_by = request.args.get('sort', 'total')
+    data = StatsModel.get_leaderboard(sort_by=sort_by, current_user_id=session['user_id'], limit=100)
+    return jsonify({'success': True, **data})
 
 
 if __name__ == '__main__':

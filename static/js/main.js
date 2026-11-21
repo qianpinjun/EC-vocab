@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     VocabModule.init();
     QuizModule.init();
     if (window.GrammarModule) GrammarModule.init();
+    if (window.LeaderboardModule) LeaderboardModule.init();
     initAuth();
     await checkAuthAndBoot();
 });
@@ -14,6 +15,7 @@ function switchMode(mode, subTab = 'vocab') {
     const portal = document.getElementById('modePortal');
     const vocabWs = document.getElementById('vocabWorkspace');
     const grammarWs = document.getElementById('grammarWorkspace');
+    const rankingWs = document.getElementById('leaderboardWorkspace');
     const navButtons = document.querySelectorAll('#mainNav .segment-btn');
 
     if (mode !== 'grammar' && window.GrammarVideoPlayer) {
@@ -23,6 +25,7 @@ function switchMode(mode, subTab = 'vocab') {
     if (portal) portal.style.display = mode === 'portal' ? 'block' : 'none';
     if (vocabWs) vocabWs.style.display = mode === 'vocab' ? 'block' : 'none';
     if (grammarWs) grammarWs.style.display = mode === 'grammar' ? 'block' : 'none';
+    if (rankingWs) rankingWs.style.display = mode === 'ranking' ? 'block' : 'none';
 
     navButtons.forEach(b => {
         const bMode = b.getAttribute('data-mode');
@@ -34,7 +37,9 @@ function switchMode(mode, subTab = 'vocab') {
         }
     });
 
-    if (mode === 'vocab') {
+    if (mode === 'portal' && window.LeaderboardModule) {
+        LeaderboardModule.loadMySummary();
+    } else if (mode === 'vocab') {
         const panes = document.querySelectorAll('#vocabWorkspace .view-panel');
         panes.forEach(p => p.classList.remove('active'));
         const targetPane = document.getElementById(`tab${subTab.charAt(0).toUpperCase() + subTab.slice(1)}`);
@@ -44,6 +49,8 @@ function switchMode(mode, subTab = 'vocab') {
         }
     } else if (mode === 'grammar' && window.GrammarModule) {
         GrammarModule.resetToHub();
+    } else if (mode === 'ranking' && window.LeaderboardModule) {
+        LeaderboardModule.loadLeaderboard(LeaderboardModule.currentSort);
     }
 }
 

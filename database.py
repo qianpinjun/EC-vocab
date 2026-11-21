@@ -2,11 +2,14 @@ import sqlite3
 from contextlib import contextmanager
 from config import DATABASE_PATH
 
+
 def get_db():
-    conn = sqlite3.connect(DATABASE_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=15, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
+
 
 @contextmanager
 def db_cursor(commit=True):
@@ -22,8 +25,13 @@ def db_cursor(commit=True):
     finally:
         conn.close()
 
+
 def init_db():
     with db_cursor() as cur:
+        # Enable WAL mode for safe multi-student concurrent access on a server
+        cur.execute("PRAGMA journal_mode = WAL")
+        cur.execute("PRAGMA synchronous = NORMAL")
+
         # Users table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -75,7 +83,34 @@ def init_db():
             )
         """)
 
-        # Pets table
+        # Per-user cumulative study statistics (powers the online school ranking system)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_stats (
+                user_id INTEGER PRIMARY KEY,
+                vocab_reviewed INTEGER DEFAULT 0,
+                vocab_correct INTEGER DEFAULT 0,
+                grammar_completed INTEGER DEFAULT 0,
+                grammar_correct INTEGER DEFAULT 0,
+                last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """)
+
+        # Per-question grammar attempt log (tracks unique grammar questions gone through + accuracy)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS grammar_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                question_id TEXT NOT NULL,
+                topic_id TEXT DEFAULT '',
+                is_correct INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_grammar_attempts_user ON grammar_attempts (user_id, question_id)")
+
+        # Pets table (legacy compatibility)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,11 +158,23 @@ def init_db():
             )
         """)
 
-        # Ensure default user (id=1) exists for single-user / no-login mode
+        # Ensure default local seed user (id=1) exists
         cur.execute("""
             INSERT OR IGNORE INTO users (id, email, username, password_hash)
             VALUES (1, 'default@local', 'default', '')
         """)
+
+        # Backfill user_stats rows for any existing registered users
+        cur.execute("""
+            INSERT OR IGNORE INTO user_stats (user_id, vocab_reviewed, vocab_correct, grammar_completed, grammar_correct)
+            SELECT u.id,
+                   COALESCE((SELECT SUM(w.correct_count + w.wrong_count) FROM words w WHERE w.user_id = u.id), 0),
+                   COALESCE((SELECT SUM(w.correct_count) FROM words w WHERE w.user_id = u.id), 0),
+                   0,
+                   0
+            FROM users u
+        """)
+
 
 if __name__ == '__main__':
     init_db()

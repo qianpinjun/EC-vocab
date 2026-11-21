@@ -711,6 +711,17 @@ const GrammarModule = {
         if (btnSubmit) btnSubmit.style.display = 'none';
         if (btnNext) btnNext.style.display = 'inline-flex';
 
+        // Persist grammar question completion to server/cloud ranking stats
+        if (window.API && API.grammar && typeof API.grammar.record === 'function') {
+            API.grammar.record(q.id, this.activeTopic ? this.activeTopic.id : '', isCorrect)
+                .then(res => {
+                    if (res && res.summary && window.LeaderboardModule) {
+                        LeaderboardModule.renderPortalLedger(res.summary);
+                    }
+                })
+                .catch(() => {});
+        }
+
         if (isCorrect) {
             this.firstTryCorrectCount++;
             sounds.playCorrect();

@@ -1,0 +1,14 @@
+services:
+  ec-studio:
+    build: .
+    container_name: ec-language-lab
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DEBUG=False
+      # Optional: set a fixed secret key in production (otherwise auto-generated in ./data/.secret_key)
+      # - SECRET_KEY=change-this-to-a-long-random-string
+    volumes:
+      - ./data:/app/data

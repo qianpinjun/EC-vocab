@@ -1,3 +1,6 @@
 ﻿__pycache__/
 *.pyc
 ec_project.zip
+ec_server_release.zip
+data/.secret_key
+venv/

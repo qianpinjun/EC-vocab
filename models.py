@@ -6,15 +6,19 @@ from database import db_cursor
 
 
 def _load_starter_seed():
-    seed_path = os.path.join(BASE_DIR, 'docs', 'data', 'vocab.json')
-    if os.path.exists(seed_path):
-        try:
-            with open(seed_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            if isinstance(data.get('lists'), list) and isinstance(data.get('words'), list):
-                return data
-        except Exception:
-            pass
+    candidates = [
+        os.path.join(BASE_DIR, 'data', 'starter_vocab.json'),
+        os.path.join(BASE_DIR, 'docs', 'data', 'vocab.json'),
+    ]
+    for seed_path in candidates:
+        if os.path.exists(seed_path):
+            try:
+                with open(seed_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if isinstance(data.get('lists'), list) and isinstance(data.get('words'), list):
+                    return data
+            except Exception:
+                pass
     return None
 
 
@@ -55,6 +59,10 @@ class UserModel:
                 (email, username, pw_hash)
             )
             new_user_id = cur.lastrowid
+            cur.execute(
+                "INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)",
+                (new_user_id,)
+            )
 
             # Seed starter EC lists/words for the newly registered user
             seed = _load_starter_seed()
@@ -267,3 +275,145 @@ class WordModel:
                         mastered = 0
                     WHERE id = ? AND user_id = ?
                 """, (word_id, user_id))
+
+
+class StatsModel:
+    @staticmethod
+    def record_vocab_attempt(user_id, is_correct):
+        if not user_id:
+            return
+        with db_cursor() as cur:
+            cur.execute("INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)", (user_id,))
+            cur.execute("""
+                UPDATE user_stats
+                SET vocab_reviewed = vocab_reviewed + 1,
+                    vocab_correct = vocab_correct + ?,
+                    last_active_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+            """, (1 if is_correct else 0, user_id))
+
+    @staticmethod
+    def record_grammar_attempt(user_id, question_id, topic_id='', is_correct=False):
+        if not user_id:
+            return
+        q_id = (question_id or '').strip()
+        t_id = (topic_id or '').strip()
+        ok_int = 1 if is_correct else 0
+        with db_cursor() as cur:
+            cur.execute("INSERT OR IGNORE INTO user_stats (user_id) VALUES (?)", (user_id,))
+            cur.execute("""
+                UPDATE user_stats
+                SET grammar_completed = grammar_completed + 1,
+                    grammar_correct = grammar_correct + ?,
+                    last_active_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+            """, (ok_int, user_id))
+            if q_id:
+                cur.execute("""
+                    INSERT INTO grammar_attempts (user_id, question_id, topic_id, is_correct)
+                    VALUES (?, ?, ?, ?)
+                """, (user_id, q_id, t_id, ok_int))
+
+    @staticmethod
+    def _build_ranked_rows(sort_by='total'):
+        with db_cursor(commit=False) as cur:
+            cur.execute("""
+                SELECT
+                    u.id AS user_id,
+                    u.username,
+                    u.created_at,
+                    COALESCE(s.vocab_reviewed, 0) AS vocab_reviewed,
+                    COALESCE(s.vocab_correct, 0) AS vocab_correct,
+                    COALESCE(s.grammar_completed, 0) AS grammar_completed,
+                    COALESCE(s.grammar_correct, 0) AS grammar_correct,
+                    COALESCE(s.last_active_at, u.created_at) AS last_active_at,
+                    COALESCE((
+                        SELECT COUNT(DISTINCT LOWER(w.word))
+                        FROM words w
+                        WHERE w.user_id = u.id AND w.mastered = 1
+                    ), 0) AS vocab_mastered,
+                    COALESCE((
+                        SELECT COUNT(DISTINCT ga.question_id)
+                        FROM grammar_attempts ga
+                        WHERE ga.user_id = u.id
+                    ), 0) AS grammar_unique
+                FROM users u
+                LEFT JOIN user_stats s ON s.user_id = u.id
+                WHERE u.password_hash IS NOT NULL AND u.password_hash != ''
+            """)
+            rows = [dict(r) for r in cur.fetchall()]
+
+        entries = []
+        for r in rows:
+            vr = int(r['vocab_reviewed'] or 0)
+            vc = int(r['vocab_correct'] or 0)
+            gc = int(r['grammar_completed'] or 0)
+            gok = int(r['grammar_correct'] or 0)
+            total_attempts = vr + gc
+            total_correct = vc + gok
+            acc = round((total_correct / total_attempts) * 100) if total_attempts > 0 else 0
+            # Balanced school effort + mastery score
+            score = vr * 2 + vc + gc * 3 + gok * 2 + int(r['vocab_mastered'] or 0) * 4
+            entries.append({
+                'user_id': r['user_id'],
+                'username': r['username'],
+                'vocab_reviewed': vr,
+                'vocab_correct': vc,
+                'vocab_mastered': int(r['vocab_mastered'] or 0),
+                'grammar_completed': gc,
+                'grammar_correct': gok,
+                'grammar_unique': int(r['grammar_unique'] or 0),
+                'accuracy_pct': acc,
+                'total_score': score,
+                'last_active_at': r['last_active_at'] or '',
+            })
+
+        if sort_by == 'vocab':
+            entries.sort(key=lambda x: (-x['vocab_reviewed'], -x['vocab_mastered'], -x['total_score'], x['username'].lower()))
+        elif sort_by == 'grammar':
+            entries.sort(key=lambda x: (-x['grammar_completed'], -x['grammar_unique'], -x['total_score'], x['username'].lower()))
+        else:
+            entries.sort(key=lambda x: (-x['total_score'], -(x['vocab_reviewed'] + x['grammar_completed']), x['username'].lower()))
+
+        for idx, item in enumerate(entries, start=1):
+            item['rank'] = idx
+        return entries
+
+    @staticmethod
+    def get_leaderboard(sort_by='total', current_user_id=None, limit=100):
+        sort_key = sort_by if sort_by in ('total', 'vocab', 'grammar') else 'total'
+        entries = StatsModel._build_ranked_rows(sort_key)
+        my_entry = None
+        for item in entries:
+            item['is_me'] = (current_user_id is not None and item['user_id'] == current_user_id)
+            if item['is_me']:
+                my_entry = item
+        return {
+            'sort': sort_key,
+            'total_students': len(entries),
+            'my_rank': my_entry,
+            'entries': entries[:limit],
+        }
+
+    @staticmethod
+    def get_user_summary(user_id):
+        lb = StatsModel.get_leaderboard(sort_by='total', current_user_id=user_id, limit=500)
+        if lb['my_rank']:
+            summary = dict(lb['my_rank'])
+            summary['total_students'] = lb['total_students']
+            return summary
+        return {
+            'user_id': user_id,
+            'username': '',
+            'rank': None,
+            'total_students': lb['total_students'],
+            'vocab_reviewed': 0,
+            'vocab_correct': 0,
+            'vocab_mastered': 0,
+            'grammar_completed': 0,
+            'grammar_correct': 0,
+            'grammar_unique': 0,
+            'accuracy_pct': 0,
+            'total_score': 0,
+            'last_active_at': '',
+        }

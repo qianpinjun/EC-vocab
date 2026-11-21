@@ -215,6 +215,28 @@ const API = {
                 body: JSON.stringify({ words, theme_id: themeId })
             });
         }
+    },
+    grammar: {
+        async record(questionId, topicId, isCorrect) {
+            return await fetchJson('/grammar/record', {
+                method: 'POST',
+                body: JSON.stringify({
+                    question_id: questionId,
+                    topic_id: topicId,
+                    is_correct: Boolean(isCorrect)
+                })
+            });
+        }
+    },
+    stats: {
+        async me() {
+            return await fetchJson('/stats/me');
+        }
+    },
+    leaderboard: {
+        async get(sortBy = 'total') {
+            return await fetchJson(`/leaderboard?sort=${encodeURIComponent(sortBy)}`);
+        }
     }
 };
 
