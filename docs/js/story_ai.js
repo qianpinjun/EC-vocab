@@ -223,7 +223,7 @@
     ],
     "down": [
         "looking {WORD_TAG} from the library balcony, he spotted the courier arriving with the sealed folder.",
-        "他从图书馆阳台上向“{MEANING_TAG}”望去，正好看见信使带着密封档案袋走了过来。"
+        "他从图书馆阳台“{MEANING_TAG}”望去，正好看见信使带着密封档案袋走了过来。"
     ],
     "downtrodden": [
         "the historical exhibition highlighted letters written by {WORD_TAG} mill workers who fought peacefully for fair hours.",
@@ -359,7 +359,7 @@
     ],
     "left": [
         "turning {WORD_TAG} at the brick clocktower, they found the side entrance to the quiet municipal archive.",
-        "在红砖钟楼处向“{MEANING_TAG}”一转，他们便找到了通往静谧市政档案馆的侧门。"
+        "在红砖钟楼处拐向“{MEANING_TAG}”小路，他们便找到了通往静谧市政档案馆的侧门。"
     ],
     "lionize": [
         "newspapers were quick to {WORD_TAG} the solo inventor, though she insisted on sharing credit with her entire lab team.",
@@ -515,7 +515,7 @@
     ],
     "right": [
         "stepping {WORD_TAG} into the sunlit courtyard, they saw the bulletin board already updated with the schedule.",
-        "他们径直向“{MEANING_TAG}”跨进洒满阳光的庭院，看见公告栏上已经贴出了最新日程。"
+        "他们转向“{MEANING_TAG}”步入洒满阳光的庭院，看见公告栏上已经贴出了最新日程。"
     ],
     "scrimp": [
         "to afford the field-trip train tickets, the photography club had to {WORD_TAG} on printing supplies for two months.",
@@ -575,7 +575,7 @@
     ],
     "up": [
         "glancing {WORD_TAG} at the vaulted ceiling, visitors noticed dates from 1894 painted along the wooden beams.",
-        "访客们抬头向“{MEANING_TAG}”望向拱形天花板，发现木梁上绘着1894年的纪念年份。"
+        "访客们“{MEANING_TAG}”望向拱形天花板，发现木梁上绘着1894年的纪念年份。"
     ],
     "upbraid": [
         "rather than choosing to {WORD_TAG} the intern publicly, the editor offered calm, constructive feedback in private.",

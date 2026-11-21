@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="./css/style.css?v=20261121c">
+    <link rel="stylesheet" href="./css/style.css?v=20261121e">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -664,19 +664,20 @@ dialogue 对话，对白"></textarea>
                         <table class="data-table lb-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 72px;">排名</th>
+                                    <th class="lb-col-rank-head" style="width: 76px;">排名</th>
                                     <th>同学</th>
-                                    <th class="lb-num-head">已刷词汇题</th>
+                                    <th class="lb-num-head" data-sort-col="vocab">已刷词汇题</th>
                                     <th class="lb-num-head">已掌握词</th>
-                                    <th class="lb-num-head">已刷语法题</th>
+                                    <th class="lb-num-head" data-sort-col="grammar">已刷语法题</th>
                                     <th class="lb-num-head">综合正确率</th>
-                                    <th class="lb-num-head">综合积分</th>
+                                    <th class="lb-num-head lb-col-active" data-sort-col="total">综合积分</th>
                                     <th style="text-align:right;">最近学习</th>
                                 </tr>
                             </thead>
                             <tbody id="lbTableBody"></tbody>
                         </table>
                     </div>
+                    <div class="lb-invite-note" id="lbInviteNote" style="display: none;"></div>
                     <div class="lb-footnote">
                         积分规则：每刷 1 道词汇题 +2 分（答对再 +1）、每掌握 1 个词汇 +4 分、每刷 1 道语法题 +3 分（答对再 +2），兼顾勤奋度与准确率。
                     </div>
@@ -913,7 +914,7 @@ dialogue 对话，对白"></textarea>
         </div>
 
         <!-- Modal: Standalone Story Studio Preview -->
-        <div class="modal-backdrop" id="modalStoryStudio" style="display: none;">
+        <div class="modal-overlay" id="modalStoryStudio" style="display: none;">
             <div class="modal-dialog modal-story-dialog">
                 <div class="modal-title-row">
                     <div>
@@ -971,14 +972,14 @@ dialogue 对话，对白"></textarea>
     <script src="./js/seed_data.js?v=20261121"></script>
     <script src="./js/cloud_config.js?v=20261121"></script>
     <script src="./js/question_bank.js?v=20261121"></script>
-    <script src="./js/story_ai.js?v=20261121b"></script>
+    <script src="./js/story_ai.js?v=20261121e"></script>
     <script src="./js/api.js?v=20261121c"></script>
     <script src="./js/vocab.js?v=20261121c"></script>
     <script src="./js/quiz.js?v=20261121c"></script>
     <script src="./js/grammar_data.js?v=20261121c"></script>
     <script src="./js/grammar.js?v=20261121c"></script>
-    <script src="./js/leaderboard.js?v=20261121c"></script>
-    <script src="./js/admin.js?v=20261121c"></script>
-    <script src="./js/main.js?v=20261121c"></script>
+    <script src="./js/leaderboard.js?v=20261121d"></script>
+    <script src="./js/admin.js?v=20261121d"></script>
+    <script src="./js/main.js?v=20261121d"></script>
 </body>
 </html>

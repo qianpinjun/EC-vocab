@@ -2511,3 +2511,263 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     cursor: pointer;
     margin-top: 0.35rem;
 }
+
+/* ==================== Core Utility, Modal & Full-Width Editorial Tables ==================== */
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-error {
+    color: var(--state-error);
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 25, 23, 0.52);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1rem;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    font-size: 0.9rem;
+    background: var(--card-surface);
+}
+
+.data-table thead th {
+    background: #f4efe4;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 0.77rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: left;
+    padding: 0.85rem 1.05rem;
+    border-bottom: 1.5px solid var(--border-strong);
+    white-space: nowrap;
+}
+
+.data-table tbody td {
+    padding: 0.92rem 1.05rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+    background: #faf7f0;
+}
+
+/* Enhanced School Ranking Visual Polish */
+.lb-podium-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.lb-col-rank {
+    width: 76px;
+    text-align: center !important;
+}
+
+.lb-table thead th.lb-col-rank-head {
+    text-align: center;
+}
+
+.lb-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 140px;
+}
+
+.lb-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ede6d6;
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    font-family: var(--font-serif);
+    font-size: 0.82rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.lb-row-me .lb-avatar {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #ffffff;
+}
+
+.lb-user-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.25;
+}
+
+.lb-num-main {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-num-unit {
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
+.lb-col-active {
+    background: rgba(27, 67, 50, 0.045);
+}
+
+.lb-table thead th.lb-col-active {
+    background: #e6efe9;
+    color: var(--accent-primary);
+}
+
+.lb-acc-wrap {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 72px;
+}
+
+.lb-acc-text {
+    font-size: 0.84rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-acc-bar {
+    width: 68px;
+    height: 5px;
+    background: #e8e2d5;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.lb-acc-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.lb-acc-fill.acc-high { background: #1b4332; }
+.lb-acc-fill.acc-mid  { background: #b45309; }
+.lb-acc-fill.acc-low  { background: #9b2c2c; }
+
+.lb-score-pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    background: #eef7f2;
+    border: 1px solid #b7dec9;
+    color: #1b4332;
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.lb-invite-note {
+    padding: 0.75rem 1.2rem;
+    background: #fdfbf6;
+    border-top: 1px dashed var(--border-strong);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+/* ==================== Visual QA Polish Fixes ==================== */
+/* Prevent toast notifications from covering the top-right header logout/user buttons */
+.toast-stack {
+    top: 72px !important;
+    right: 1.25rem !important;
+}
+
+/* Keep top nav items on a single clean line */
+#mainNav .segment-btn {
+    white-space: nowrap;
+}
+
+/* Prevent Story Studio toolbar buttons from wrapping vertically or stretching the <select> */
+.story-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.story-tools .btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.story-theme-select {
+    align-self: center;
+    height: 34px !important;
+    line-height: 1.2 !important;
+    width: auto !important;
+}
+
+/* Prevent Story Studio modal footer clipping */
+.modal-story-dialog {
+    display: flex;
+    flex-direction: column;
+    max-height: 88vh;
+    overflow: hidden !important;
+    padding: 1.45rem 1.65rem !important;
+}
+
+.studio-story-body {
+    flex: 1 1 auto;
+    min-height: 160px;
+    max-height: 38vh;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+}
+
+/* Keep Admin Word Bank action buttons neatly on one line even for long titles */
+.admin-bank-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-bank-item .admin-row-actions {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+
+/* Responsive tightness for tablet / half-screen desktop windows (~800-960px) */
+@media (max-width: 960px) {
+    .data-table thead th,
+    .data-table tbody td {
+        padding: 0.72rem 0.65rem;
+        font-size: 0.84rem;
+    }
+    .lb-user-cell {
+        min-width: 110px;
+    }
+    .lb-acc-bar {
+        width: 52px;
+    }
+}
