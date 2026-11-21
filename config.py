@@ -33,4 +33,4 @@ HOST = os.environ.get('HOST', '0.0.0.0')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
 ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME', 'admin')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ec2026')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ECAdmin#2026')

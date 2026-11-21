@@ -10,7 +10,7 @@ except ImportError:
     CORS = None
 from config import SECRET_KEY, PORT, HOST, DEBUG
 from database import init_db
-from models import UserModel, VocabListModel, WordModel, StatsModel
+from models import UserModel, VocabListModel, WordModel, StatsModel, AdminModel
 from question_engine import generate_quiz_round, DEFAULT_DISTRACTORS
 from story_engine import generate_absurd_story
 
@@ -35,6 +35,25 @@ def login_required(f):
         user_id = session.get('user_id')
         if not user_id:
             return jsonify({'success': False, 'error': '请先登录账号'}), 401
+        user = UserModel.get_by_id(user_id)
+        if not user:
+            session.pop('user_id', None)
+            session.pop('username', None)
+            session.pop('is_admin', None)
+            return jsonify({'success': False, 'error': '账号登录状态已失效或被停用'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'success': False, 'error': '请先登录管理员账号'}), 401
+        user = UserModel.get_by_id(user_id)
+        if not user or not user.get('is_admin'):
+            return jsonify({'success': False, 'error': '权限不足：仅管理员可访问此功能'}), 403
         return f(*args, **kwargs)
     return decorated
 
@@ -76,17 +95,21 @@ def api_auth_login():
     data = request.get_json() or {}
     username = data.get('username', '').strip()
     password = data.get('password', '')
-    user = UserModel.authenticate(username, password)
+    try:
+        user = UserModel.authenticate(username, password)
+    except PermissionError as e:
+        return jsonify({'success': False, 'error': str(e)}), 403
     if not user:
         return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
     session.permanent = True
     session['user_id'] = user['id']
     session['username'] = user['username']
+    session['is_admin'] = bool(user.get('is_admin'))
     return jsonify({
         'success': True,
         'logged_in': True,
         'user': user,
-        'message': f"欢迎回来，{user['username']}！"
+        'message': f"欢迎回来，{user['username']}（管理员）！" if user.get('is_admin') else f"欢迎回来，{user['username']}！"
     })
 
 
@@ -94,6 +117,7 @@ def api_auth_login():
 def api_auth_logout():
     session.pop('user_id', None)
     session.pop('username', None)
+    session.pop('is_admin', None)
     return jsonify({'success': True, 'logged_in': False, 'message': '已退出登录'})
 
 
@@ -400,6 +424,184 @@ def api_leaderboard():
     sort_by = request.args.get('sort', 'total')
     data = StatsModel.get_leaderboard(sort_by=sort_by, current_user_id=session['user_id'], limit=100)
     return jsonify({'success': True, **data})
+
+
+# ----------------- School Admin Console Endpoints -----------------
+def _parse_batch_text(raw_text):
+    items = []
+    for line in (raw_text or '').splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if '|' in line:
+            parts = [p.strip() for p in line.split('|')]
+        elif '\t' in line:
+            parts = [p.strip() for p in line.split('\t')]
+        elif ' - ' in line:
+            parts = [p.strip() for p in line.split(' - ', 1)]
+        else:
+            parts = re.split(r'\s{2,}', line)
+            if len(parts) == 1:
+                m = re.match(r'^([a-zA-Z\s\-\']+)\s+(.+)$', line)
+                if m:
+                    parts = [m.group(1).strip(), m.group(2).strip()]
+        if len(parts) >= 2 and parts[0] and parts[1]:
+            items.append({
+                'word': parts[0],
+                'meaning': parts[1],
+                'example_en': parts[2] if len(parts) >= 3 else '',
+                'example_cn': parts[3] if len(parts) >= 4 else '',
+            })
+    return items
+
+
+@app.route('/api/admin/overview', methods=['GET'])
+@admin_required
+def api_admin_overview():
+    return jsonify({'success': True, **AdminModel.get_overview()})
+
+
+@app.route('/api/admin/users/<int:target_user_id>/reset_password', methods=['POST'])
+@admin_required
+def api_admin_reset_password(target_user_id):
+    data = request.get_json() or {}
+    try:
+        AdminModel.reset_password(target_user_id, data.get('new_password', ''))
+        return jsonify({'success': True, 'message': '密码已重置'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/users/<int:target_user_id>/toggle_status', methods=['POST'])
+@admin_required
+def api_admin_toggle_status(target_user_id):
+    try:
+        disabled = AdminModel.toggle_disabled(target_user_id)
+        return jsonify({'success': True, 'is_disabled': disabled, 'message': '账号已停用' if disabled else '账号已恢复启用'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/users/<int:target_user_id>/reset_stats', methods=['POST'])
+@admin_required
+def api_admin_reset_stats(target_user_id):
+    AdminModel.reset_user_stats(target_user_id)
+    return jsonify({'success': True, 'message': '该同学的刷题统计已清零'})
+
+
+@app.route('/api/admin/users/<int:target_user_id>', methods=['DELETE'])
+@admin_required
+def api_admin_delete_user(target_user_id):
+    try:
+        AdminModel.delete_user(target_user_id)
+        return jsonify({'success': True, 'message': '账号已永久删除'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks', methods=['GET'])
+@admin_required
+def api_admin_get_wordbanks():
+    scope = request.args.get('scope', 'template')
+    try:
+        lists = AdminModel.get_wordbanks(scope)
+        return jsonify({'success': True, 'scope': scope, 'lists': lists})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks', methods=['POST'])
+@admin_required
+def api_admin_create_wordbank():
+    data = request.get_json() or {}
+    scope = data.get('scope', 'template')
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
+    push_to_all = bool(data.get('push_to_all', False))
+    words_items = data.get('words')
+    if not isinstance(words_items, list):
+        words_items = _parse_batch_text(data.get('batch_text', ''))
+    try:
+        res = AdminModel.create_wordbank(scope, name, description, words_items, push_to_all=push_to_all)
+        msg = f"词库单元「{name}」已创建（含 {len(words_items)} 词）"
+        if res['pushed_students'] > 0:
+            msg += f"，并已下发给 {res['pushed_students']} 位学生！"
+        return jsonify({'success': True, **res, 'message': msg})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks/<int:list_id>', methods=['DELETE'])
+@admin_required
+def api_admin_delete_wordbank(list_id):
+    scope = request.args.get('scope', 'template')
+    try:
+        AdminModel.delete_wordbank(scope, list_id)
+        return jsonify({'success': True, 'message': '词库单元已删除'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks/<int:list_id>/words', methods=['GET'])
+@admin_required
+def api_admin_get_bank_words(list_id):
+    scope = request.args.get('scope', 'template')
+    try:
+        words = AdminModel.get_words_in_bank(scope, list_id)
+        return jsonify({'success': True, 'words': words})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks/<int:list_id>/words', methods=['POST'])
+@admin_required
+def api_admin_add_bank_words(list_id):
+    data = request.get_json() or {}
+    scope = data.get('scope', 'template')
+    sync_all = bool(data.get('sync_all', False))
+    words_items = data.get('words')
+    if not isinstance(words_items, list):
+        words_items = _parse_batch_text(data.get('batch_text', ''))
+    if not words_items and data.get('word') and data.get('meaning'):
+        words_items = [{
+            'word': data.get('word', ''),
+            'meaning': data.get('meaning', ''),
+            'example_en': data.get('example_en', ''),
+            'example_cn': data.get('example_cn', ''),
+        }]
+    if not words_items:
+        return jsonify({'success': False, 'error': '未解析到有效词汇，请使用「单词 | 释义」格式'}), 400
+    try:
+        res = AdminModel.add_words_to_bank(scope, list_id, words_items, sync_all=sync_all)
+        msg = f"已录入 {res['added']} 个词汇"
+        if res['pushed_students'] > 0:
+            msg += f"，并同步下发给 {res['pushed_students']} 位学生"
+        return jsonify({'success': True, **res, 'message': msg})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks/<int:list_id>/words/<int:word_id>', methods=['DELETE'])
+@admin_required
+def api_admin_delete_bank_word(list_id, word_id):
+    scope = request.args.get('scope', 'template')
+    try:
+        AdminModel.delete_word_from_bank(scope, list_id, word_id)
+        return jsonify({'success': True, 'message': '词汇已移除'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@app.route('/api/admin/wordbanks/<int:list_id>/broadcast', methods=['POST'])
+@admin_required
+def api_admin_broadcast_bank(list_id):
+    data = request.get_json() or {}
+    scope = data.get('scope', 'template')
+    try:
+        pushed = AdminModel.broadcast_existing_bank(scope, list_id)
+        return jsonify({'success': True, 'pushed_students': pushed, 'message': f'已将该词库单元推送同步至全校 {pushed} 位学生账号！'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
 
 
 if __name__ == '__main__':

@@ -26,9 +26,14 @@ class UserModel:
     @staticmethod
     def get_by_id(user_id):
         with db_cursor(commit=False) as cur:
-            cur.execute("SELECT id, email, username, created_at FROM users WHERE id = ?", (user_id,))
+            cur.execute("SELECT id, email, username, COALESCE(is_admin, 0) AS is_admin, COALESCE(is_disabled, 0) AS is_disabled, created_at FROM users WHERE id = ?", (user_id,))
             row = cur.fetchone()
-            return dict(row) if row else None
+            if not row or row['is_disabled']:
+                return None
+            d = dict(row)
+            d['is_admin'] = bool(d['is_admin'])
+            d['is_disabled'] = bool(d['is_disabled'])
+            return d
 
     @staticmethod
     def register(username, password, email=''):
@@ -92,7 +97,7 @@ class UserModel:
                             )
                         )
 
-            return {'id': new_user_id, 'username': username, 'email': email}
+            return {'id': new_user_id, 'username': username, 'email': email, 'is_admin': False}
 
     @staticmethod
     def authenticate(identifier, password):
@@ -103,7 +108,9 @@ class UserModel:
 
         with db_cursor(commit=False) as cur:
             cur.execute(
-                """SELECT id, email, username, password_hash
+                """SELECT id, email, username, password_hash,
+                          COALESCE(is_admin, 0) AS is_admin,
+                          COALESCE(is_disabled, 0) AS is_disabled
                    FROM users
                    WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)""",
                 (identifier, identifier)
@@ -116,9 +123,18 @@ class UserModel:
             if not stored_hash:
                 return None
 
-            if check_password_hash(stored_hash, password):
-                return {'id': row['id'], 'username': row['username'], 'email': row['email']}
-            return None
+            if not check_password_hash(stored_hash, password):
+                return None
+
+            if row['is_disabled']:
+                raise PermissionError("该账号已被管理员停用，请联系老师恢复")
+
+            return {
+                'id': row['id'],
+                'username': row['username'],
+                'email': row['email'],
+                'is_admin': bool(row['is_admin'])
+            }
 
 
 class VocabListModel:
@@ -340,6 +356,8 @@ class StatsModel:
                 FROM users u
                 LEFT JOIN user_stats s ON s.user_id = u.id
                 WHERE u.password_hash IS NOT NULL AND u.password_hash != ''
+                  AND COALESCE(u.is_admin, 0) = 0
+                  AND COALESCE(u.is_disabled, 0) = 0
             """)
             rows = [dict(r) for r in cur.fetchall()]
 
@@ -417,3 +435,371 @@ class StatsModel:
             'total_score': 0,
             'last_active_at': '',
         }
+
+
+class AdminModel:
+    @staticmethod
+    def _template_path():
+        return os.path.join(BASE_DIR, 'data', 'starter_vocab.json')
+
+    @staticmethod
+    def load_template():
+        data = _load_starter_seed()
+        if not data:
+            return {'lists': [], 'words': []}
+        return {
+            'lists': [dict(l) for l in data.get('lists', [])],
+            'words': [dict(w) for w in data.get('words', [])],
+        }
+
+    @staticmethod
+    def save_template(data):
+        t_path = AdminModel._template_path()
+        os.makedirs(os.path.dirname(t_path), exist_ok=True)
+        with open(t_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def get_overview():
+        with db_cursor(commit=False) as cur:
+            cur.execute("""
+                SELECT
+                    u.id,
+                    u.username,
+                    u.email,
+                    COALESCE(u.is_admin, 0) AS is_admin,
+                    COALESCE(u.is_disabled, 0) AS is_disabled,
+                    u.created_at,
+                    COALESCE(s.vocab_reviewed, 0) AS vocab_reviewed,
+                    COALESCE(s.vocab_correct, 0) AS vocab_correct,
+                    COALESCE(s.grammar_completed, 0) AS grammar_completed,
+                    COALESCE(s.grammar_correct, 0) AS grammar_correct,
+                    COALESCE(s.last_active_at, u.created_at) AS last_active_at,
+                    COALESCE((SELECT COUNT(*) FROM vocab_lists vl WHERE vl.user_id = u.id), 0) AS list_count,
+                    COALESCE((SELECT COUNT(*) FROM words w WHERE w.user_id = u.id), 0) AS word_count,
+                    COALESCE((SELECT COUNT(DISTINCT LOWER(w.word)) FROM words w WHERE w.user_id = u.id AND w.mastered = 1), 0) AS vocab_mastered
+                FROM users u
+                LEFT JOIN user_stats s ON s.user_id = u.id
+                WHERE u.password_hash IS NOT NULL AND u.password_hash != ''
+                ORDER BY COALESCE(u.is_admin, 0) DESC, u.created_at DESC
+            """)
+            rows = [dict(r) for r in cur.fetchall()]
+
+        accounts = []
+        total_vocab = 0
+        total_grammar = 0
+        student_count = 0
+        for r in rows:
+            vr = int(r['vocab_reviewed'] or 0)
+            vc = int(r['vocab_correct'] or 0)
+            gc = int(r['grammar_completed'] or 0)
+            gok = int(r['grammar_correct'] or 0)
+            tot = vr + gc
+            acc = round(((vc + gok) / tot) * 100) if tot > 0 else 0
+            score = vr * 2 + vc + gc * 3 + gok * 2 + int(r['vocab_mastered'] or 0) * 4
+            is_adm = bool(r['is_admin'])
+            if not is_adm:
+                student_count += 1
+                total_vocab += vr
+                total_grammar += gc
+            accounts.append({
+                'id': r['id'],
+                'username': r['username'],
+                'email': r['email'],
+                'is_admin': is_adm,
+                'is_disabled': bool(r['is_disabled']),
+                'created_at': r['created_at'] or '',
+                'last_active_at': r['last_active_at'] or '',
+                'vocab_reviewed': vr,
+                'vocab_correct': vc,
+                'vocab_mastered': int(r['vocab_mastered'] or 0),
+                'grammar_completed': gc,
+                'grammar_correct': gok,
+                'accuracy_pct': acc,
+                'total_score': score,
+                'list_count': int(r['list_count'] or 0),
+                'word_count': int(r['word_count'] or 0),
+            })
+
+        tpl = AdminModel.load_template()
+        return {
+            'summary': {
+                'student_count': student_count,
+                'total_vocab_reviewed': total_vocab,
+                'total_grammar_completed': total_grammar,
+                'template_list_count': len(tpl['lists']),
+                'template_word_count': len(tpl['words']),
+            },
+            'accounts': accounts,
+        }
+
+    @staticmethod
+    def reset_password(target_user_id, new_password):
+        new_password = (new_password or '').strip()
+        if len(new_password) < 4:
+            raise ValueError("新密码至少需要 4 个字符")
+        pw_hash = generate_password_hash(new_password)
+        with db_cursor() as cur:
+            cur.execute("UPDATE users SET password_hash = ? WHERE id = ?", (pw_hash, target_user_id))
+            if cur.rowcount == 0:
+                raise ValueError("目标账号不存在")
+
+    @staticmethod
+    def toggle_disabled(target_user_id):
+        with db_cursor() as cur:
+            cur.execute("SELECT id, COALESCE(is_admin, 0) AS is_admin, COALESCE(is_disabled, 0) AS is_disabled FROM users WHERE id = ?", (target_user_id,))
+            row = cur.fetchone()
+            if not row:
+                raise ValueError("目标账号不存在")
+            if row['is_admin']:
+                raise ValueError("不能停用管理员账号")
+            new_val = 0 if row['is_disabled'] else 1
+            cur.execute("UPDATE users SET is_disabled = ? WHERE id = ?", (new_val, target_user_id))
+            return bool(new_val)
+
+    @staticmethod
+    def reset_user_stats(target_user_id):
+        with db_cursor() as cur:
+            cur.execute("UPDATE user_stats SET vocab_reviewed = 0, vocab_correct = 0, grammar_completed = 0, grammar_correct = 0 WHERE user_id = ?", (target_user_id,))
+            cur.execute("DELETE FROM grammar_attempts WHERE user_id = ?", (target_user_id,))
+            cur.execute("UPDATE words SET correct_count = 0, wrong_count = 0, mastered = 0 WHERE user_id = ?", (target_user_id,))
+
+    @staticmethod
+    def delete_user(target_user_id):
+        with db_cursor() as cur:
+            cur.execute("SELECT id, COALESCE(is_admin, 0) AS is_admin FROM users WHERE id = ?", (target_user_id,))
+            row = cur.fetchone()
+            if not row:
+                raise ValueError("目标账号不存在")
+            if row['is_admin']:
+                raise ValueError("不能删除管理员账号")
+            cur.execute("DELETE FROM users WHERE id = ?", (target_user_id,))
+
+    @staticmethod
+    def get_wordbanks(scope='template'):
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            counts = {}
+            for w in tpl['words']:
+                lid = w.get('list_id')
+                counts[lid] = counts.get(lid, 0) + 1
+            lists = []
+            for lst in sorted(tpl['lists'], key=lambda x: (x.get('sort_order', 0), x.get('id', 0))):
+                lists.append({
+                    'id': lst['id'],
+                    'name': lst['name'],
+                    'description': lst.get('description', ''),
+                    'word_count': counts.get(lst['id'], 0),
+                })
+            return lists
+        if scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            return VocabListModel.get_all_lists(uid)
+        raise ValueError("无效的词库管理范围")
+
+    @staticmethod
+    def get_words_in_bank(scope, list_id):
+        list_id = int(list_id)
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            return [dict(w) for w in tpl['words'] if int(w.get('list_id', -1)) == list_id]
+        if scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            return WordModel.get_words_by_list(uid, list_id)
+        raise ValueError("无效的词库管理范围")
+
+    @staticmethod
+    def broadcast_list_to_all_students(name, description, word_items):
+        """Create or merge a word bank into every active student account."""
+        name = (name or '').strip()
+        description = (description or '').strip()
+        if not name:
+            return 0
+        synced_users = 0
+        with db_cursor() as cur:
+            cur.execute("""
+                SELECT id FROM users
+                WHERE password_hash IS NOT NULL AND password_hash != ''
+                  AND COALESCE(is_admin, 0) = 0
+            """)
+            student_ids = [r['id'] for r in cur.fetchall()]
+            for uid in student_ids:
+                cur.execute(
+                    "SELECT id FROM vocab_lists WHERE user_id = ? AND LOWER(name) = LOWER(?)",
+                    (uid, name)
+                )
+                existing = cur.fetchone()
+                if existing:
+                    target_lid = existing['id']
+                    if description:
+                        cur.execute("UPDATE vocab_lists SET description = ? WHERE id = ?", (description, target_lid))
+                else:
+                    cur.execute("SELECT MAX(sort_order) FROM vocab_lists WHERE user_id = ?", (uid,))
+                    max_o = cur.fetchone()[0] or 0
+                    cur.execute(
+                        "INSERT INTO vocab_lists (user_id, name, description, sort_order) VALUES (?, ?, ?, ?)",
+                        (uid, name, description, max_o + 1)
+                    )
+                    target_lid = cur.lastrowid
+
+                cur.execute("SELECT LOWER(word) FROM words WHERE list_id = ? AND user_id = ?", (target_lid, uid))
+                existing_words = {r[0] for r in cur.fetchall()}
+                for item in (word_items or []):
+                    w = (item.get('word') or '').strip()
+                    m = (item.get('meaning') or '').strip()
+                    if not w or not m or w.lower() in existing_words:
+                        continue
+                    existing_words.add(w.lower())
+                    cur.execute(
+                        """INSERT INTO words (list_id, user_id, word, meaning, phonetic, example_en, example_cn)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (
+                            target_lid, uid, w, m,
+                            (item.get('phonetic') or '').strip(),
+                            (item.get('example_en') or '').strip(),
+                            (item.get('example_cn') or '').strip(),
+                        )
+                    )
+                synced_users += 1
+        return synced_users
+
+    @staticmethod
+    def create_wordbank(scope, name, description='', word_items=None, push_to_all=False):
+        name = (name or '').strip()
+        description = (description or '').strip()
+        word_items = word_items or []
+        if not name:
+            raise ValueError("词库单元名称不能为空")
+
+        created_id = None
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            next_lid = max([int(l.get('id', 0)) for l in tpl['lists']], default=0) + 1
+            next_ord = max([int(l.get('sort_order', 0)) for l in tpl['lists']], default=0) + 1
+            next_wid = max([int(w.get('id', 0)) for w in tpl['words']], default=0) + 1
+            tpl['lists'].append({
+                'id': next_lid,
+                'name': name,
+                'description': description,
+                'sort_order': next_ord,
+            })
+            for item in word_items:
+                w = (item.get('word') or '').strip()
+                m = (item.get('meaning') or '').strip()
+                if not w or not m:
+                    continue
+                tpl['words'].append({
+                    'id': next_wid,
+                    'list_id': next_lid,
+                    'word': w,
+                    'meaning': m,
+                    'phonetic': (item.get('phonetic') or '').strip(),
+                    'example_en': (item.get('example_en') or '').strip(),
+                    'example_cn': (item.get('example_cn') or '').strip(),
+                })
+                next_wid += 1
+            AdminModel.save_template(tpl)
+            created_id = next_lid
+        elif scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            created_id = VocabListModel.create(uid, name, description)
+            if word_items:
+                WordModel.batch_add_words(uid, created_id, word_items)
+        else:
+            raise ValueError("无效的词库管理范围")
+
+        synced = 0
+        if push_to_all:
+            synced = AdminModel.broadcast_list_to_all_students(name, description, word_items)
+
+        return {'list_id': created_id, 'pushed_students': synced}
+
+    @staticmethod
+    def delete_wordbank(scope, list_id):
+        list_id = int(list_id)
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            tpl['lists'] = [l for l in tpl['lists'] if int(l.get('id', -1)) != list_id]
+            tpl['words'] = [w for w in tpl['words'] if int(w.get('list_id', -1)) != list_id]
+            AdminModel.save_template(tpl)
+            return True
+        if scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            return VocabListModel.delete(uid, list_id)
+        raise ValueError("无效的词库管理范围")
+
+    @staticmethod
+    def add_words_to_bank(scope, list_id, word_items, sync_all=False):
+        list_id = int(list_id)
+        added = 0
+        list_name = ''
+        list_desc = ''
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            target = next((l for l in tpl['lists'] if int(l.get('id', -1)) == list_id), None)
+            if not target:
+                raise ValueError("模板词库单元不存在")
+            list_name = target['name']
+            list_desc = target.get('description', '')
+            next_wid = max([int(w.get('id', 0)) for w in tpl['words']], default=0) + 1
+            for item in word_items:
+                w = (item.get('word') or '').strip()
+                m = (item.get('meaning') or '').strip()
+                if not w or not m:
+                    continue
+                tpl['words'].append({
+                    'id': next_wid,
+                    'list_id': list_id,
+                    'word': w,
+                    'meaning': m,
+                    'phonetic': (item.get('phonetic') or '').strip(),
+                    'example_en': (item.get('example_en') or '').strip(),
+                    'example_cn': (item.get('example_cn') or '').strip(),
+                })
+                next_wid += 1
+                added += 1
+            AdminModel.save_template(tpl)
+        elif scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            added = WordModel.batch_add_words(uid, list_id, word_items)
+        else:
+            raise ValueError("无效的词库管理范围")
+
+        synced = 0
+        if sync_all and list_name:
+            synced = AdminModel.broadcast_list_to_all_students(list_name, list_desc, word_items)
+        return {'added': added, 'pushed_students': synced}
+
+    @staticmethod
+    def delete_word_from_bank(scope, list_id, word_id):
+        word_id = int(word_id)
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            before = len(tpl['words'])
+            tpl['words'] = [w for w in tpl['words'] if int(w.get('id', -1)) != word_id]
+            AdminModel.save_template(tpl)
+            return len(tpl['words']) < before
+        if scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            return WordModel.delete_word(uid, word_id)
+        raise ValueError("无效的词库管理范围")
+
+    @staticmethod
+    def broadcast_existing_bank(scope, list_id):
+        list_id = int(list_id)
+        if scope == 'template':
+            tpl = AdminModel.load_template()
+            target = next((l for l in tpl['lists'] if int(l.get('id', -1)) == list_id), None)
+            if not target:
+                raise ValueError("模板词库单元不存在")
+            words = [w for w in tpl['words'] if int(w.get('list_id', -1)) == list_id]
+            return AdminModel.broadcast_list_to_all_students(target['name'], target.get('description', ''), words)
+        if scope.startswith('user:'):
+            uid = int(scope.split(':', 1)[1])
+            lists = VocabListModel.get_all_lists(uid)
+            target = next((l for l in lists if int(l['id']) == list_id), None)
+            if not target:
+                raise ValueError("词库单元不存在")
+            words = WordModel.get_words_by_list(uid, list_id)
+            return AdminModel.broadcast_list_to_all_students(target['name'], target.get('description', ''), words)
+        raise ValueError("无效的词库管理范围")

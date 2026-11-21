@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261121">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261121c">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -29,6 +29,7 @@
                     <button class="segment-btn" data-mode="vocab" data-tab="quiz">词汇训练</button>
                     <button class="segment-btn" data-mode="grammar">语法 Packet 4</button>
                     <button class="segment-btn" data-mode="ranking">全校排行</button>
+                    <button class="segment-btn" id="navBtnAdmin" data-mode="admin" style="display: none;">管理后台</button>
                 </nav>
 
                 <div id="userHeaderBox" style="display: none; align-items: center; gap: 10px;">
@@ -149,6 +150,15 @@
                         <div class="portal-meta-row">
                             <span>实时在线同步</span>
                             <span class="portal-cta">查看榜单 &rarr;</span>
+                        </div>
+                    </div>
+                    <div class="portal-card portal-card-admin" id="portalBtnAdmin" style="display: none;">
+                        <div class="portal-num">04 / ADMIN CONSOLE</div>
+                        <h3>学校管理员控制台</h3>
+                        <p>查看全校全部学生账号状态、刷题进度与活跃时间；支持新建、编辑、删除公共词库单元并一键同步下发全校学生。</p>
+                        <div class="portal-meta-row">
+                            <span>仅管理员可见</span>
+                            <span class="portal-cta">进入后台 &rarr;</span>
                         </div>
                     </div>
                 </div>
@@ -672,6 +682,153 @@ dialogue 对话，对白"></textarea>
                     </div>
                 </div>
             </div>
+
+            <!-- School Admin Console Workspace (Visible ONLY to Admin) -->
+            <div id="adminWorkspace" style="display: none;">
+                <div class="panel-header lb-header">
+                    <div class="header-left">
+                        <span class="editorial-kicker">SCHOOL ADMINISTRATION · 教务与词库管控中心</span>
+                        <h2>学校管理员控制台</h2>
+                        <p class="subtitle">集中监控全校学生账号与刷题进度，统一制作、维护并下发公共词库单元。</p>
+                    </div>
+                    <div class="header-right">
+                        <div class="lb-sort-bar" id="adminSubTabs">
+                            <button type="button" class="lb-sort-btn active" data-admin-tab="accounts">账号与状态</button>
+                            <button type="button" class="lb-sort-btn" data-admin-tab="banks">词库管控与新建</button>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnAdminRefresh">刷新</button>
+                    </div>
+                </div>
+
+                <!-- School KPI Strip -->
+                <div class="study-ledger-bar">
+                    <div class="ledger-cell">
+                        <span class="ledger-label">注册学生数</span>
+                        <strong class="ledger-value" id="adminStatStudents">0</strong>
+                    </div>
+                    <div class="ledger-cell">
+                        <span class="ledger-label">全校词汇刷题总数</span>
+                        <strong class="ledger-value" id="adminStatVocab">0</strong>
+                    </div>
+                    <div class="ledger-cell">
+                        <span class="ledger-label">全校语法刷题总数</span>
+                        <strong class="ledger-value" id="adminStatGrammar">0</strong>
+                    </div>
+                    <div class="ledger-cell">
+                        <span class="ledger-label">默认公共词库规模</span>
+                        <strong class="ledger-value accent" id="adminStatBanks" style="font-size:1.15rem;">0 单元</strong>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 1: All Accounts & Status -->
+                <div id="adminPanelAccounts">
+                    <div class="content-card lb-table-card">
+                        <div class="admin-table-bar">
+                            <strong>全校账号列表与学习状态</strong>
+                            <input type="text" id="adminAccountSearch" class="form-input" placeholder="按用户名或邮箱搜索..." style="max-width: 260px; padding: 0.4rem 0.7rem;">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table lb-table">
+                                <thead>
+                                    <tr>
+                                        <th>账号 / 邮箱</th>
+                                        <th>身份与状态</th>
+                                        <th class="lb-num-head">已刷词汇</th>
+                                        <th class="lb-num-head">已掌握词</th>
+                                        <th class="lb-num-head">已刷语法</th>
+                                        <th class="lb-num-head">正确率</th>
+                                        <th class="lb-num-head">单元 / 词数</th>
+                                        <th style="text-align:right;">最近活跃</th>
+                                        <th>管控操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminAccountsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 2: Global & Student Word Banks Control -->
+                <div id="adminPanelBanks" style="display: none;">
+                    <div class="toolbar-card" style="margin-bottom: 1.15rem;">
+                        <div class="select-wrapper" style="flex:1;">
+                            <label for="adminBankScopeSelect"><strong>当前管控词库范围：</strong></label>
+                            <select id="adminBankScopeSelect" class="form-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="admin-banks-grid">
+                        <!-- Left: Create New Word Bank -->
+                        <div class="content-card">
+                            <div class="card-head">
+                                <h3>新建词库单元</h3>
+                            </div>
+                            <form id="formAdminCreateBank" class="form-compact">
+                                <div class="field-group">
+                                    <label>词库单元名称</label>
+                                    <input type="text" id="adminNewBankName" class="form-input" placeholder="例如: Packet 5 - Academic Rhetoric" required>
+                                </div>
+                                <div class="field-group">
+                                    <label>单元描述（选填）</label>
+                                    <input type="text" id="adminNewBankDesc" class="form-input" placeholder="例如: 期中复习核心词库">
+                                </div>
+                                <div class="field-group">
+                                    <label>批量录入初始词汇（每行一词，格式：单词 | 中文释义 | 英文例句 | 中文译文）</label>
+                                    <textarea id="adminNewBankBatch" class="form-textarea" rows="6" placeholder="cogent | 有说服力的 | She presented a cogent argument. | 她提出了极具说服力的论点。&#10;bolster | 加强，支撑 | New data helped bolster the claim. | 新数据进一步支撑了该论点。"></textarea>
+                                </div>
+                                <label class="admin-check-row">
+                                    <input type="checkbox" id="adminNewBankPushAll" checked>
+                                    <span>创建后立即同步下发给全校所有现有学生账号</span>
+                                </label>
+                                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.75rem;">
+                                    创建并保存词库单元
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Right: Existing Word Banks List -->
+                        <div class="content-card">
+                            <div class="card-head">
+                                <h3>已有词库单元管理</h3>
+                            </div>
+                            <div id="adminBanksList" class="admin-banks-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Bank Word Editor -->
+                    <div class="content-card" id="adminBankWordsBox" style="display: none; margin-top: 1.25rem;">
+                        <div class="card-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                            <h3 id="adminSelectedBankTitle">当前编辑单元</h3>
+                        </div>
+                        <form id="formAdminAddWords" class="form-compact" style="margin-bottom: 1rem;">
+                            <div class="field-group">
+                                <label>向本单元追加词汇（每行：单词 | 中文释义 | 英文例句(选填) | 中文译文(选填)）</label>
+                                <textarea id="adminAddWordsText" class="form-textarea" rows="3" placeholder="ephemeral | 短暂的 | Autumn colors are brief and ephemeral. | 秋色短暂易逝。"></textarea>
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
+                                <label class="admin-check-row" style="margin:0;">
+                                    <input type="checkbox" id="adminAddWordsSyncAll">
+                                    <span>同时将新增词汇同步推送给全校学生</span>
+                                </label>
+                                <button type="submit" class="btn btn-primary btn-sm">追加录入词汇</button>
+                            </div>
+                        </form>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>英文单词</th>
+                                        <th>中文释义</th>
+                                        <th>例句</th>
+                                        <th style="text-align:right; width: 90px;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminBankWordsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Reusable Animated Video Player Shell -->
@@ -813,12 +970,13 @@ dialogue 对话，对白"></textarea>
     <!-- Scripts -->
     <script src="/static/js/question_bank.js?v=20261121"></script>
     <script src="/static/js/story_ai.js?v=20261121b"></script>
-    <script src="/static/js/api.js?v=20261121"></script>
-    <script src="/static/js/vocab.js?v=20261121"></script>
-    <script src="/static/js/quiz.js?v=20261121"></script>
-    <script src="/static/js/grammar_data.js?v=20261121"></script>
-    <script src="/static/js/grammar.js?v=20261121"></script>
-    <script src="/static/js/leaderboard.js?v=20261121"></script>
-    <script src="/static/js/main.js?v=20261121"></script>
+    <script src="/static/js/api.js?v=20261121c"></script>
+    <script src="/static/js/vocab.js?v=20261121c"></script>
+    <script src="/static/js/quiz.js?v=20261121c"></script>
+    <script src="/static/js/grammar_data.js?v=20261121c"></script>
+    <script src="/static/js/grammar.js?v=20261121c"></script>
+    <script src="/static/js/leaderboard.js?v=20261121c"></script>
+    <script src="/static/js/admin.js?v=20261121c"></script>
+    <script src="/static/js/main.js?v=20261121c"></script>
 </body>
 </html>

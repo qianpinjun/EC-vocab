@@ -2358,7 +2358,156 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
         border-bottom: 1px solid var(--border-subtle);
     }
     .portal-grid-3,
-    .lb-podium-grid {
+    .lb-podium-grid,
+    .admin-banks-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* ==================== School Admin Console Styles ==================== */
+.portal-card-admin {
+    border-top-color: var(--accent-crimson) !important;
+}
+
+.admin-table-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid var(--border-subtle);
+    background: #faf8f3;
+}
+
+.admin-status-pill {
+    display: inline-block;
+    padding: 0.14rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.admin-status-pill.status-active {
+    background: #eef7f2;
+    color: #1b4332;
+    border: 1px solid #b7dec9;
+}
+
+.admin-status-pill.status-disabled {
+    background: #fdf2f2;
+    color: #9b2c2c;
+    border: 1px solid #efc6c6;
+}
+
+.admin-status-pill.role-admin {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.admin-row-disabled {
+    opacity: 0.62;
+    background: #faf7f5;
+}
+
+.admin-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+
+.btn-mini {
+    border: 1px solid var(--border-strong);
+    background: var(--card-surface);
+    color: var(--text-primary);
+    padding: 0.22rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.btn-mini:hover {
+    background: #f0ece2;
+}
+
+.btn-mini.is-ok {
+    border-color: #b7dec9;
+    color: #1b4332;
+    background: #eef7f2;
+}
+
+.btn-mini.is-ok:hover {
+    background: #dcf0e5;
+}
+
+.btn-mini.is-warn {
+    border-color: #f5d08a;
+    color: #92400e;
+    background: #fffbeb;
+}
+
+.btn-mini.is-danger {
+    border-color: #efc6c6;
+    color: #9b2c2c;
+    background: #fdf2f2;
+}
+
+.btn-mini.is-danger:hover {
+    background: #fae2e2;
+}
+
+.admin-banks-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 1.15rem;
+    align-items: start;
+}
+
+.admin-banks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    max-height: 460px;
+    overflow-y: auto;
+}
+
+.admin-bank-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem 0.95rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: #fffefb;
+}
+
+.admin-bank-item.is-selected {
+    border-color: var(--accent-primary);
+    background: #eef7f2;
+}
+
+.admin-bank-info strong {
+    display: block;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+}
+
+.admin-bank-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+.admin-check-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    margin-top: 0.35rem;
 }

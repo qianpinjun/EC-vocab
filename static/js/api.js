@@ -237,6 +237,66 @@ const API = {
         async get(sortBy = 'total') {
             return await fetchJson(`/leaderboard?sort=${encodeURIComponent(sortBy)}`);
         }
+    },
+    admin: {
+        async overview() {
+            return await fetchJson('/admin/overview');
+        },
+        async resetPassword(userId, newPassword) {
+            return await fetchJson(`/admin/users/${userId}/reset_password`, {
+                method: 'POST',
+                body: JSON.stringify({ new_password: newPassword })
+            });
+        },
+        async toggleStatus(userId) {
+            return await fetchJson(`/admin/users/${userId}/toggle_status`, { method: 'POST' });
+        },
+        async resetStats(userId) {
+            return await fetchJson(`/admin/users/${userId}/reset_stats`, { method: 'POST' });
+        },
+        async deleteUser(userId) {
+            return await fetchJson(`/admin/users/${userId}`, { method: 'DELETE' });
+        },
+        async getWordbanks(scope = 'template') {
+            return await fetchJson(`/admin/wordbanks?scope=${encodeURIComponent(scope)}`);
+        },
+        async createWordbank(scope, name, description, batchText, pushToAll) {
+            return await fetchJson('/admin/wordbanks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    scope,
+                    name,
+                    description,
+                    batch_text: batchText,
+                    push_to_all: Boolean(pushToAll)
+                })
+            });
+        },
+        async deleteWordbank(scope, listId) {
+            return await fetchJson(`/admin/wordbanks/${listId}?scope=${encodeURIComponent(scope)}`, {
+                method: 'DELETE'
+            });
+        },
+        async getBankWords(scope, listId) {
+            return await fetchJson(`/admin/wordbanks/${listId}/words?scope=${encodeURIComponent(scope)}`);
+        },
+        async addBankWords(scope, listId, batchText, syncAll = false) {
+            return await fetchJson(`/admin/wordbanks/${listId}/words`, {
+                method: 'POST',
+                body: JSON.stringify({ scope, batch_text: batchText, sync_all: Boolean(syncAll) })
+            });
+        },
+        async deleteBankWord(scope, listId, wordId) {
+            return await fetchJson(`/admin/wordbanks/${listId}/words/${wordId}?scope=${encodeURIComponent(scope)}`, {
+                method: 'DELETE'
+            });
+        },
+        async broadcastBank(scope, listId) {
+            return await fetchJson(`/admin/wordbanks/${listId}/broadcast`, {
+                method: 'POST',
+                body: JSON.stringify({ scope })
+            });
+        }
     }
 };
 

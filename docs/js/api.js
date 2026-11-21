@@ -535,6 +535,63 @@ function generateAbsurdStory(errorWords, themeId = null) {
 }
 
 // ----------------- Client-Side API -----------------
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD_SHA256 = '768225fadf33c3388e839585c03e9e55b3e85b944506a7dde36ff1b5ad71f5e3';
+const ADMIN_TEMPLATE_KEY = 'ec_admin_template_v1';
+
+function loadAdminTemplate() {
+    try {
+        const raw = localStorage.getItem(ADMIN_TEMPLATE_KEY);
+        if (raw) {
+            const p = JSON.parse(raw);
+            if (p && Array.isArray(p.lists) && Array.isArray(p.words)) return p;
+        }
+    } catch (e) {}
+    return cloneSeedData();
+}
+
+function saveAdminTemplate(tpl) {
+    try {
+        localStorage.setItem(ADMIN_TEMPLATE_KEY, JSON.stringify(tpl));
+    } catch (e) {}
+}
+
+function parseAdminBatchText(rawText) {
+    const items = [];
+    for (const rawLine of String(rawText || '').split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        let parts;
+        if (line.includes('|')) parts = line.split('|').map(p => p.trim());
+        else if (line.includes('\t')) parts = line.split('\t').map(p => p.trim());
+        else if (line.includes(' - ')) parts = line.split(' - ', 2).map(p => p.trim());
+        else {
+            parts = line.split(/\s{2,}/);
+            if (parts.length === 1) {
+                const m = line.match(/^([a-zA-Z\s\-']+)\s+(.+)$/);
+                if (m) parts = [m[1].trim(), m[2].trim()];
+            }
+        }
+        if (parts.length >= 2 && parts[0] && parts[1]) {
+            items.push({
+                word: parts[0],
+                meaning: parts[1],
+                phonetic: '',
+                example_en: parts[2] || '',
+                example_cn: parts[3] || ''
+            });
+        }
+    }
+    return items;
+}
+
+function requireAdminSession() {
+    const uname = (getSessionUsername() || '').toLowerCase();
+    if (uname !== ADMIN_USERNAME) {
+        throw new Error('权限不足：仅管理员可访问此功能');
+    }
+}
+
 const API = {
     auth: {
         async status() {
@@ -544,19 +601,41 @@ const API = {
             const key = uname.toLowerCase();
             const accounts = loadLocalAccounts();
 
+            if (key === ADMIN_USERNAME) {
+                if (!accounts[key]) {
+                    accounts[key] = {
+                        username: ADMIN_USERNAME,
+                        email: 'admin@school.admin',
+                        password_hash: ADMIN_PASSWORD_SHA256,
+                        is_admin: true,
+                        data: loadAdminTemplate()
+                    };
+                    saveLocalAccounts(accounts);
+                }
+                return {
+                    success: true,
+                    logged_in: true,
+                    user: { username: ADMIN_USERNAME, email: 'admin@school.admin', is_admin: true }
+                };
+            }
+
             if (getCloudConfig()) {
                 try {
-                    const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,email,password_hash,data`);
+                    const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,email,password_hash,data`);
                     if (rows && rows.length > 0) {
                         const row = rows[0];
+                        if (row.data && row.data.disabled) {
+                            setSessionUsername(null);
+                            return { success: true, logged_in: false, user: null };
+                        }
                         accounts[key] = {
-                            username: row.username,
+                            username: row.display_name || row.username,
                             email: row.email || '',
                             password_hash: row.password_hash,
                             data: row.data || cloneSeedData()
                         };
                         saveLocalAccounts(accounts);
-                        return { success: true, logged_in: true, user: { username: row.username, email: row.email || '' } };
+                        return { success: true, logged_in: true, user: { username: row.display_name || row.username, email: row.email || '', is_admin: false } };
                     }
                 } catch (e) {
                     console.warn('Cloud status refresh failed, using local cache:', e);
@@ -564,10 +643,14 @@ const API = {
             }
 
             if (accounts[key]) {
+                if (accounts[key].data && accounts[key].data.disabled) {
+                    setSessionUsername(null);
+                    return { success: true, logged_in: false, user: null };
+                }
                 return {
                     success: true,
                     logged_in: true,
-                    user: { username: accounts[key].username, email: accounts[key].email || '' }
+                    user: { username: accounts[key].username, email: accounts[key].email || '', is_admin: false }
                 };
             }
             setSessionUsername(null);
@@ -580,29 +663,57 @@ const API = {
             const pwHash = await hashPassword(key, password);
             const accounts = loadLocalAccounts();
 
+            // Dedicated Admin Login via normal login screen
+            if (key === ADMIN_USERNAME) {
+                if (pwHash !== ADMIN_PASSWORD_SHA256) {
+                    throw new Error('管理员密码错误');
+                }
+                accounts[key] = {
+                    username: ADMIN_USERNAME,
+                    email: 'admin@school.admin',
+                    password_hash: ADMIN_PASSWORD_SHA256,
+                    is_admin: true,
+                    data: accounts[key] && accounts[key].data ? accounts[key].data : loadAdminTemplate()
+                };
+                saveLocalAccounts(accounts);
+                setSessionUsername(ADMIN_USERNAME);
+                return {
+                    success: true,
+                    logged_in: true,
+                    user: { username: ADMIN_USERNAME, email: 'admin@school.admin', is_admin: true },
+                    message: '欢迎回来，admin（管理员）！'
+                };
+            }
+
             if (getCloudConfig()) {
-                const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,email,password_hash,data`);
+                const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,email,password_hash,data`);
                 if (!rows || rows.length === 0 || rows[0].password_hash !== pwHash) {
                     throw new Error('用户名或密码错误');
                 }
                 const row = rows[0];
+                if (row.data && row.data.disabled) {
+                    throw new Error('该账号已被管理员停用，请联系老师恢复');
+                }
                 accounts[key] = {
-                    username: row.username,
+                    username: row.display_name || row.username,
                     email: row.email || '',
                     password_hash: row.password_hash,
                     data: row.data || cloneSeedData()
                 };
                 saveLocalAccounts(accounts);
                 setSessionUsername(row.username);
-                return { success: true, logged_in: true, user: { username: row.username, email: row.email || '' }, message: `欢迎回来，${row.username}！` };
+                return { success: true, logged_in: true, user: { username: row.display_name || row.username, email: row.email || '', is_admin: false }, message: `欢迎回来，${row.display_name || row.username}！` };
             }
 
             const acc = accounts[key];
             if (!acc || acc.password_hash !== pwHash) {
                 throw new Error('用户名或密码错误');
             }
+            if (acc.data && acc.data.disabled) {
+                throw new Error('该账号已被管理员停用，请联系老师恢复');
+            }
             setSessionUsername(acc.username);
-            return { success: true, logged_in: true, user: { username: acc.username, email: acc.email || '' }, message: `欢迎回来，${acc.username}！` };
+            return { success: true, logged_in: true, user: { username: acc.username, email: acc.email || '', is_admin: false }, message: `欢迎回来，${acc.username}！` };
         },
         async register(username, password, email = '') {
             const uname = (username || '').trim();
@@ -610,8 +721,9 @@ const API = {
             if ((password || '').length < 4) throw new Error('密码至少需要 4 个字符');
 
             const key = uname.toLowerCase();
+            if (key === ADMIN_USERNAME) throw new Error('admin 为系统保留管理员账号，不可重复注册');
             const pwHash = await hashPassword(key, password);
-            const seedData = cloneSeedData();
+            const seedData = loadAdminTemplate();
             const accounts = loadLocalAccounts();
 
             if (getCloudConfig()) {
@@ -965,7 +1077,11 @@ const API = {
                     }
                 }
             }
-            rawUsers = Array.from(mergedMap.values());
+            rawUsers = Array.from(mergedMap.values()).filter(u => {
+                const k = String(u.username || '').toLowerCase();
+                const d = (u && u.data && typeof u.data === 'object') ? u.data : {};
+                return k !== ADMIN_USERNAME && !d.disabled;
+            });
 
             const entries = rawUsers.map(u => {
                 const d = (u && u.data && typeof u.data === 'object') ? u.data : {};
@@ -1021,6 +1137,384 @@ const API = {
                 my_rank: myRank,
                 entries: entries.slice(0, 100)
             };
+        }
+    },
+    admin: {
+        async _fetchAllCloudUsers() {
+            const map = new Map();
+            if (getCloudConfig()) {
+                try {
+                    const rows = await supabaseFetch('ec_users?select=username,display_name,email,data,updated_at&limit=300', { method: 'GET' });
+                    if (Array.isArray(rows)) {
+                        for (const r of rows) {
+                            const k = String(r.username || '').toLowerCase();
+                            if (k) map.set(k, r);
+                        }
+                    }
+                } catch (e) {}
+            }
+            const locals = loadLocalAccounts();
+            for (const k of Object.keys(locals)) {
+                if (!map.has(k)) {
+                    map.set(k, {
+                        username: k,
+                        display_name: locals[k].username || k,
+                        email: locals[k].email || '',
+                        data: locals[k].data || cloneSeedData(),
+                        updated_at: ''
+                    });
+                }
+            }
+            return map;
+        },
+        async _saveStudentRow(unameKey, newData, newPwHash = null) {
+            const k = String(unameKey || '').toLowerCase();
+            const locals = loadLocalAccounts();
+            if (locals[k]) {
+                locals[k].data = newData;
+                if (newPwHash) locals[k].password_hash = newPwHash;
+                saveLocalAccounts(locals);
+            }
+            if (getCloudConfig()) {
+                const payload = { data: newData, updated_at: new Date().toISOString() };
+                if (newPwHash) payload.password_hash = newPwHash;
+                await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(k)}`, {
+                    method: 'PATCH',
+                    headers: { 'Prefer': 'return=minimal' },
+                    body: JSON.stringify(payload)
+                });
+            }
+        },
+        async _broadcastToStudents(name, description, wordItems) {
+            const map = await this._fetchAllCloudUsers();
+            let count = 0;
+            for (const [k, row] of map.entries()) {
+                if (k === ADMIN_USERNAME) continue;
+                const d = (row.data && typeof row.data === 'object') ? JSON.parse(JSON.stringify(row.data)) : cloneSeedData();
+                if (!Array.isArray(d.lists)) d.lists = [];
+                if (!Array.isArray(d.words)) d.words = [];
+                let target = d.lists.find(l => String(l.name || '').toLowerCase() === name.toLowerCase());
+                if (!target) {
+                    target = { id: nextId(d.lists), name, description, sort_order: d.lists.length + 1 };
+                    d.lists.push(target);
+                } else if (description) {
+                    target.description = description;
+                }
+                const existingW = new Set(d.words.filter(w => w.list_id === target.id).map(w => String(w.word || '').toLowerCase()));
+                for (const item of (wordItems || [])) {
+                    const wl = String(item.word || '').toLowerCase();
+                    if (!wl || existingW.has(wl)) continue;
+                    existingW.add(wl);
+                    d.words.push({
+                        id: nextId(d.words),
+                        list_id: target.id,
+                        word: item.word,
+                        meaning: item.meaning,
+                        phonetic: item.phonetic || '',
+                        example_en: item.example_en || '',
+                        example_cn: item.example_cn || '',
+                        wrong_count: 0,
+                        correct_count: 0,
+                        mastered: 0
+                    });
+                }
+                await this._saveStudentRow(k, d);
+                count++;
+            }
+            return count;
+        },
+        async overview() {
+            requireAdminSession();
+            const map = await this._fetchAllCloudUsers();
+            const accounts = [];
+            let totalVocab = 0;
+            let totalGrammar = 0;
+            let studentCount = 0;
+
+            for (const [k, u] of map.entries()) {
+                const isAdm = (k === ADMIN_USERNAME);
+                const d = (u.data && typeof u.data === 'object') ? u.data : {};
+                const lists = Array.isArray(d.lists) ? d.lists : [];
+                const words = Array.isArray(d.words) ? d.words : [];
+                const st = (d.stats && typeof d.stats === 'object') ? d.stats : {};
+                const wordAttempts = words.reduce((a, w) => a + (w.correct_count || 0) + (w.wrong_count || 0), 0);
+                const wordCorrect = words.reduce((a, w) => a + (w.correct_count || 0), 0);
+                const masteredSet = new Set(words.filter(w => w.mastered).map(w => String(w.word || '').toLowerCase()));
+                const vr = Math.max(Number(st.vocab_reviewed || 0), wordAttempts);
+                const vc = Math.max(Number(st.vocab_correct || 0), wordCorrect);
+                const gc = Number(st.grammar_completed || 0);
+                const gok = Number(st.grammar_correct || 0);
+                const tot = vr + gc;
+                const acc = tot > 0 ? Math.round(((vc + gok) / tot) * 100) : 0;
+                const score = vr * 2 + vc + gc * 3 + gok * 2 + masteredSet.size * 4;
+                if (!isAdm) {
+                    studentCount++;
+                    totalVocab += vr;
+                    totalGrammar += gc;
+                }
+                accounts.push({
+                    id: k,
+                    username: u.display_name || u.username || k,
+                    email: u.email || '',
+                    is_admin: isAdm,
+                    is_disabled: Boolean(d.disabled),
+                    last_active_at: st.last_active_at || u.updated_at || '',
+                    vocab_reviewed: vr,
+                    vocab_correct: vc,
+                    vocab_mastered: masteredSet.size,
+                    grammar_completed: gc,
+                    grammar_correct: gok,
+                    accuracy_pct: acc,
+                    total_score: score,
+                    list_count: lists.length,
+                    word_count: words.length
+                });
+            }
+            accounts.sort((a, b) => (b.is_admin - a.is_admin) || (b.total_score - a.total_score));
+            const tpl = loadAdminTemplate();
+            return {
+                success: true,
+                summary: {
+                    student_count: studentCount,
+                    total_vocab_reviewed: totalVocab,
+                    total_grammar_completed: totalGrammar,
+                    template_list_count: tpl.lists.length,
+                    template_word_count: tpl.words.length
+                },
+                accounts
+            };
+        },
+        async resetPassword(userId, newPassword) {
+            requireAdminSession();
+            const np = String(newPassword || '').trim();
+            if (np.length < 4) throw new Error('新密码至少需要 4 个字符');
+            const k = String(userId).toLowerCase();
+            if (k === ADMIN_USERNAME) throw new Error('管理员密码请在服务端环境变量中修改');
+            const map = await this._fetchAllCloudUsers();
+            const row = map.get(k);
+            if (!row) throw new Error('目标账号不存在');
+            const pwHash = await hashPassword(k, np);
+            await this._saveStudentRow(k, row.data || cloneSeedData(), pwHash);
+            return { success: true, message: '密码已重置' };
+        },
+        async toggleStatus(userId) {
+            requireAdminSession();
+            const k = String(userId).toLowerCase();
+            if (k === ADMIN_USERNAME) throw new Error('不能停用管理员账号');
+            const map = await this._fetchAllCloudUsers();
+            const row = map.get(k);
+            if (!row) throw new Error('目标账号不存在');
+            const d = (row.data && typeof row.data === 'object') ? JSON.parse(JSON.stringify(row.data)) : cloneSeedData();
+            d.disabled = !d.disabled;
+            await this._saveStudentRow(k, d);
+            return { success: true, is_disabled: d.disabled, message: d.disabled ? '账号已停用' : '账号已恢复启用' };
+        },
+        async resetStats(userId) {
+            requireAdminSession();
+            const k = String(userId).toLowerCase();
+            const map = await this._fetchAllCloudUsers();
+            const row = map.get(k);
+            if (!row) throw new Error('目标账号不存在');
+            const d = (row.data && typeof row.data === 'object') ? JSON.parse(JSON.stringify(row.data)) : cloneSeedData();
+            d.stats = { vocab_reviewed: 0, vocab_correct: 0, grammar_completed: 0, grammar_correct: 0, grammar_unique_ids: [] };
+            if (Array.isArray(d.words)) {
+                d.words.forEach(w => { w.correct_count = 0; w.wrong_count = 0; w.mastered = 0; });
+            }
+            await this._saveStudentRow(k, d);
+            return { success: true, message: '该同学的刷题统计已清零' };
+        },
+        async deleteUser(userId) {
+            requireAdminSession();
+            const k = String(userId).toLowerCase();
+            if (k === ADMIN_USERNAME) throw new Error('不能删除管理员账号');
+            const locals = loadLocalAccounts();
+            delete locals[k];
+            saveLocalAccounts(locals);
+            if (getCloudConfig()) {
+                await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(k)}`, {
+                    method: 'DELETE',
+                    headers: { 'Prefer': 'return=minimal' }
+                });
+            }
+            return { success: true, message: '账号已永久删除' };
+        },
+        async getWordbanks(scope = 'template') {
+            requireAdminSession();
+            let d;
+            if (scope === 'template') {
+                d = loadAdminTemplate();
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                d = (row.data && typeof row.data === 'object') ? row.data : cloneSeedData();
+            } else {
+                throw new Error('无效的词库范围');
+            }
+            const counts = {};
+            (d.words || []).forEach(w => { counts[w.list_id] = (counts[w.list_id] || 0) + 1; });
+            const lists = (d.lists || []).map(l => ({
+                id: l.id,
+                name: l.name,
+                description: l.description || '',
+                word_count: counts[l.id] || 0
+            }));
+            return { success: true, scope, lists };
+        },
+        async createWordbank(scope, name, description, batchText, pushToAll) {
+            requireAdminSession();
+            name = String(name || '').trim();
+            description = String(description || '').trim();
+            if (!name) throw new Error('词库单元名称不能为空');
+            const wordItems = parseAdminBatchText(batchText);
+
+            if (scope === 'template') {
+                const tpl = loadAdminTemplate();
+                const newLid = nextId(tpl.lists);
+                tpl.lists.push({ id: newLid, name, description, sort_order: tpl.lists.length + 1 });
+                for (const item of wordItems) {
+                    tpl.words.push({ id: nextId(tpl.words), list_id: newLid, ...item });
+                }
+                saveAdminTemplate(tpl);
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                const d = (row.data && typeof row.data === 'object') ? JSON.parse(JSON.stringify(row.data)) : cloneSeedData();
+                const newLid = nextId(d.lists);
+                d.lists.push({ id: newLid, name, description, sort_order: d.lists.length + 1 });
+                for (const item of wordItems) {
+                    d.words.push({ id: nextId(d.words), list_id: newLid, ...item, wrong_count: 0, correct_count: 0, mastered: 0 });
+                }
+                await this._saveStudentRow(k, d);
+            }
+
+            let pushed = 0;
+            if (pushToAll) {
+                pushed = await this._broadcastToStudents(name, description, wordItems);
+            }
+            return {
+                success: true,
+                pushed_students: pushed,
+                message: `词库单元「${name}」已创建（含 ${wordItems.length} 词）` + (pushed > 0 ? `，并已同步给 ${pushed} 位学生！` : '')
+            };
+        },
+        async deleteWordbank(scope, listId) {
+            requireAdminSession();
+            const lid = Number(listId);
+            if (scope === 'template') {
+                const tpl = loadAdminTemplate();
+                tpl.lists = tpl.lists.filter(l => Number(l.id) !== lid);
+                tpl.words = tpl.words.filter(w => Number(w.list_id) !== lid);
+                saveAdminTemplate(tpl);
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                const d = JSON.parse(JSON.stringify(row.data || cloneSeedData()));
+                d.lists = (d.lists || []).filter(l => Number(l.id) !== lid);
+                d.words = (d.words || []).filter(w => Number(w.list_id) !== lid);
+                await this._saveStudentRow(k, d);
+            }
+            return { success: true, message: '词库单元已删除' };
+        },
+        async getBankWords(scope, listId) {
+            requireAdminSession();
+            const lid = Number(listId);
+            let d;
+            if (scope === 'template') {
+                d = loadAdminTemplate();
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                d = row.data || cloneSeedData();
+            }
+            return { success: true, words: (d.words || []).filter(w => Number(w.list_id) === lid) };
+        },
+        async addBankWords(scope, listId, batchText, syncAll = false) {
+            requireAdminSession();
+            const lid = Number(listId);
+            const items = parseAdminBatchText(batchText);
+            if (!items.length) throw new Error('未解析到有效词汇，请使用「单词 | 释义」格式');
+            let listName = '';
+            let listDesc = '';
+
+            if (scope === 'template') {
+                const tpl = loadAdminTemplate();
+                const target = tpl.lists.find(l => Number(l.id) === lid);
+                if (!target) throw new Error('模板词库单元不存在');
+                listName = target.name;
+                listDesc = target.description || '';
+                for (const item of items) {
+                    tpl.words.push({ id: nextId(tpl.words), list_id: lid, ...item });
+                }
+                saveAdminTemplate(tpl);
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                const d = JSON.parse(JSON.stringify(row.data || cloneSeedData()));
+                const target = (d.lists || []).find(l => Number(l.id) === lid);
+                if (target) { listName = target.name; listDesc = target.description || ''; }
+                for (const item of items) {
+                    d.words.push({ id: nextId(d.words), list_id: lid, ...item, wrong_count: 0, correct_count: 0, mastered: 0 });
+                }
+                await this._saveStudentRow(k, d);
+            }
+
+            let pushed = 0;
+            if (syncAll && listName) {
+                pushed = await this._broadcastToStudents(listName, listDesc, items);
+            }
+            return {
+                success: true,
+                added: items.length,
+                pushed_students: pushed,
+                message: `已录入 ${items.length} 个词汇` + (pushed > 0 ? `，并同步下发给 ${pushed} 位学生` : '')
+            };
+        },
+        async deleteBankWord(scope, listId, wordId) {
+            requireAdminSession();
+            const wid = Number(wordId);
+            if (scope === 'template') {
+                const tpl = loadAdminTemplate();
+                tpl.words = tpl.words.filter(w => Number(w.id) !== wid);
+                saveAdminTemplate(tpl);
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                const d = JSON.parse(JSON.stringify(row.data || cloneSeedData()));
+                d.words = (d.words || []).filter(w => Number(w.id) !== wid);
+                await this._saveStudentRow(k, d);
+            }
+            return { success: true, message: '词汇已移除' };
+        },
+        async broadcastBank(scope, listId) {
+            requireAdminSession();
+            const lid = Number(listId);
+            let d;
+            if (scope === 'template') {
+                d = loadAdminTemplate();
+            } else if (scope.startsWith('user:')) {
+                const k = scope.slice(5).toLowerCase();
+                const map = await this._fetchAllCloudUsers();
+                const row = map.get(k);
+                if (!row) throw new Error('目标账号不存在');
+                d = row.data || cloneSeedData();
+            }
+            const target = (d.lists || []).find(l => Number(l.id) === lid);
+            if (!target) throw new Error('词库单元不存在');
+            const words = (d.words || []).filter(w => Number(w.list_id) === lid);
+            const pushed = await this._broadcastToStudents(target.name, target.description || '', words);
+            return { success: true, pushed_students: pushed, message: `已将该词库单元推送同步至全校 ${pushed} 位学生账号！` };
         }
     }
 };

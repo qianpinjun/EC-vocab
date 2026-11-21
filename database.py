@@ -1,6 +1,7 @@
 import sqlite3
 from contextlib import contextmanager
-from config import DATABASE_PATH
+from werkzeug.security import generate_password_hash
+from config import DATABASE_PATH, ADMIN_USERNAME, ADMIN_PASSWORD
 
 
 def get_db():
@@ -39,11 +40,22 @@ def init_db():
                 email TEXT UNIQUE NOT NULL,
                 username TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                is_disabled INTEGER DEFAULT 0,
                 coins INTEGER DEFAULT 50,
                 words_mastered INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        for col_sql in (
+            "ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN is_disabled INTEGER DEFAULT 0",
+        ):
+            try:
+                cur.execute(col_sql)
+            except sqlite3.OperationalError:
+                pass
 
         # Vocab Lists table
         cur.execute("""
@@ -163,6 +175,23 @@ def init_db():
             INSERT OR IGNORE INTO users (id, email, username, password_hash)
             VALUES (1, 'default@local', 'default', '')
         """)
+
+        # Ensure dedicated school Admin account exists with configured credentials
+        admin_uname = (ADMIN_USERNAME or 'admin').strip()
+        admin_email = f"{admin_uname.lower()}@school.admin"
+        admin_pw_hash = generate_password_hash(ADMIN_PASSWORD)
+        cur.execute("SELECT id FROM users WHERE LOWER(username) = LOWER(?)", (admin_uname,))
+        admin_row = cur.fetchone()
+        if not admin_row:
+            cur.execute(
+                "INSERT INTO users (email, username, password_hash, is_admin, is_disabled) VALUES (?, ?, ?, 1, 0)",
+                (admin_email, admin_uname, admin_pw_hash)
+            )
+        else:
+            cur.execute(
+                "UPDATE users SET password_hash = ?, is_admin = 1, is_disabled = 0 WHERE id = ?",
+                (admin_pw_hash, admin_row['id'])
+            )
 
         # Backfill user_stats rows for any existing registered users
         cur.execute("""

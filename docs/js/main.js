@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     QuizModule.init();
     if (window.GrammarModule) GrammarModule.init();
     if (window.LeaderboardModule) LeaderboardModule.init();
+    if (window.AdminModule) AdminModule.init();
     initAuth();
     await checkAuthAndBoot();
 });
@@ -16,6 +17,7 @@ function switchMode(mode, subTab = 'vocab') {
     const vocabWs = document.getElementById('vocabWorkspace');
     const grammarWs = document.getElementById('grammarWorkspace');
     const rankingWs = document.getElementById('leaderboardWorkspace');
+    const adminWs = document.getElementById('adminWorkspace');
     const navButtons = document.querySelectorAll('#mainNav .segment-btn');
 
     if (mode !== 'grammar' && window.GrammarVideoPlayer) {
@@ -26,6 +28,7 @@ function switchMode(mode, subTab = 'vocab') {
     if (vocabWs) vocabWs.style.display = mode === 'vocab' ? 'block' : 'none';
     if (grammarWs) grammarWs.style.display = mode === 'grammar' ? 'block' : 'none';
     if (rankingWs) rankingWs.style.display = mode === 'ranking' ? 'block' : 'none';
+    if (adminWs) adminWs.style.display = mode === 'admin' ? 'block' : 'none';
 
     navButtons.forEach(b => {
         const bMode = b.getAttribute('data-mode');
@@ -51,6 +54,8 @@ function switchMode(mode, subTab = 'vocab') {
         GrammarModule.resetToHub();
     } else if (mode === 'ranking' && window.LeaderboardModule) {
         LeaderboardModule.loadLeaderboard(LeaderboardModule.currentSort);
+    } else if (mode === 'admin' && window.AdminModule) {
+        AdminModule.loadAll();
     }
 }
 
@@ -58,6 +63,7 @@ function initPortal() {
     const btnVocab = document.getElementById('portalBtnVocab');
     const btnGrammar = document.getElementById('portalBtnGrammar');
     const btnRanking = document.getElementById('portalBtnRanking');
+    const btnAdmin = document.getElementById('portalBtnAdmin');
     if (btnVocab) {
         btnVocab.addEventListener('click', () => switchMode('vocab', 'vocab'));
     }
@@ -66,6 +72,9 @@ function initPortal() {
     }
     if (btnRanking) {
         btnRanking.addEventListener('click', () => switchMode('ranking'));
+    }
+    if (btnAdmin) {
+        btnAdmin.addEventListener('click', () => switchMode('admin'));
     }
 }
 
@@ -77,20 +86,27 @@ function setAuthenticatedUI(user) {
     const userHeaderBox = document.getElementById('userHeaderBox');
     const mainWorkspace = document.getElementById('mainWorkspace');
     const usernameText = document.getElementById('currentUsernameText');
+    const navBtnAdmin = document.getElementById('navBtnAdmin');
+    const portalBtnAdmin = document.getElementById('portalBtnAdmin');
 
     if (user) {
+        const isAdmin = Boolean(user.is_admin);
         if (authGate) authGate.style.display = 'none';
         if (mainNav) mainNav.style.display = 'flex';
         if (userHeaderBox) userHeaderBox.style.display = 'flex';
         if (mainWorkspace) mainWorkspace.style.display = 'block';
-        if (usernameText) usernameText.textContent = user.username;
-        switchMode('portal');
+        if (usernameText) usernameText.textContent = isAdmin ? `${user.username} · 管理员` : user.username;
+        if (navBtnAdmin) navBtnAdmin.style.display = isAdmin ? 'inline-flex' : 'none';
+        if (portalBtnAdmin) portalBtnAdmin.style.display = isAdmin ? 'flex' : 'none';
+        switchMode(isAdmin ? 'admin' : 'portal');
     } else {
         if (authGate) authGate.style.display = 'block';
         if (mainNav) mainNav.style.display = 'none';
         if (userHeaderBox) userHeaderBox.style.display = 'none';
         if (mainWorkspace) mainWorkspace.style.display = 'none';
         if (usernameText) usernameText.textContent = '';
+        if (navBtnAdmin) navBtnAdmin.style.display = 'none';
+        if (portalBtnAdmin) portalBtnAdmin.style.display = 'none';
     }
 }
 
