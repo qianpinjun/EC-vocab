@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="./css/style.css?v=20261121e">
+    <link rel="stylesheet" href="./css/style.css?v=20261121f">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -439,6 +439,9 @@ dialogue 对话，对白"></textarea>
                                 </button>
                                 <button class="btn btn-secondary btn-sm" id="btnSpeakStory">
                                     <i class="fa-solid fa-volume-high"></i> 朗读英文
+                                </button>
+                                <button class="btn btn-secondary btn-sm btn-stop-speech" id="btnStopStory" style="display: none;">
+                                    <i class="fa-solid fa-stop"></i> 停止朗读
                                 </button>
                                 <button class="btn btn-secondary btn-sm" id="btnCopyStory">
                                     <i class="fa-regular fa-copy"></i> 复制全文
@@ -942,6 +945,9 @@ dialogue 对话，对白"></textarea>
                         <button class="btn btn-secondary btn-sm" id="btnStudioSpeak">
                             <i class="fa-solid fa-volume-high"></i> 朗读英文
                         </button>
+                        <button class="btn btn-secondary btn-sm btn-stop-speech" id="btnStudioStop" style="display: none;">
+                            <i class="fa-solid fa-stop"></i> 停止
+                        </button>
                         <button class="btn btn-secondary btn-sm" id="btnStudioCopy">
                             <i class="fa-regular fa-copy"></i> 复制
                         </button>
@@ -972,14 +978,14 @@ dialogue 对话，对白"></textarea>
     <script src="./js/seed_data.js?v=20261121"></script>
     <script src="./js/cloud_config.js?v=20261121"></script>
     <script src="./js/question_bank.js?v=20261121"></script>
-    <script src="./js/story_ai.js?v=20261121e"></script>
+    <script src="./js/story_ai.js?v=20261121f"></script>
     <script src="./js/api.js?v=20261121c"></script>
-    <script src="./js/vocab.js?v=20261121c"></script>
-    <script src="./js/quiz.js?v=20261121c"></script>
+    <script src="./js/vocab.js?v=20261121f"></script>
+    <script src="./js/quiz.js?v=20261121f"></script>
     <script src="./js/grammar_data.js?v=20261121c"></script>
     <script src="./js/grammar.js?v=20261121c"></script>
     <script src="./js/leaderboard.js?v=20261121d"></script>
     <script src="./js/admin.js?v=20261121d"></script>
-    <script src="./js/main.js?v=20261121d"></script>
+    <script src="./js/main.js?v=20261121f"></script>
 </body>
 </html>

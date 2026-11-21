@@ -1159,4 +1159,150 @@
     };
 
     window.StoryStudio = StoryStudio;
+
+    // Unified, Cross-Browser Story Speech Controller (Play / Pause / Resume / Stop)
+    // Uses sentence chunking to avoid Chrome/Edge's 15s speechSynthesis stall bug.
+    const StorySpeech = {
+        state: 'idle', // 'idle' | 'playing' | 'paused'
+        activeOwner: null, // 'quiz' | 'studio'
+        chunks: [],
+        chunkIdx: 0,
+        sessionToken: 0,
+
+        _splitSentences(text) {
+            const clean = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!clean) return [];
+            const parts = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
+            return parts.map(s => s.trim()).filter(Boolean);
+        },
+
+        _syncButtons() {
+            const configs = [
+                { owner: 'quiz', playId: 'btnSpeakStory', stopId: 'btnStopStory' },
+                { owner: 'studio', playId: 'btnStudioSpeak', stopId: 'btnStudioStop' },
+            ];
+            for (const cfg of configs) {
+                const btnPlay = document.getElementById(cfg.playId);
+                const btnStop = document.getElementById(cfg.stopId);
+                const isThis = this.activeOwner === cfg.owner && this.state !== 'idle';
+                if (btnPlay) {
+                    if (isThis && this.state === 'playing') {
+                        btnPlay.innerHTML = '<i class="fa-solid fa-pause"></i> 暂停朗读';
+                        btnPlay.classList.add('is-speaking');
+                    } else if (isThis && this.state === 'paused') {
+                        btnPlay.innerHTML = '<i class="fa-solid fa-play"></i> 继续朗读';
+                        btnPlay.classList.add('is-speaking');
+                    } else {
+                        btnPlay.innerHTML = '<i class="fa-solid fa-volume-high"></i> 朗读英文';
+                        btnPlay.classList.remove('is-speaking');
+                    }
+                }
+                if (btnStop) {
+                    btnStop.style.display = isThis ? 'inline-flex' : 'none';
+                }
+            }
+        },
+
+        _speakNextChunk(token) {
+            if (token !== this.sessionToken || this.state !== 'playing') return;
+            if (this.chunkIdx >= this.chunks.length) {
+                this.state = 'idle';
+                this.activeOwner = null;
+                this._syncButtons();
+                return;
+            }
+            const u = new SpeechSynthesisUtterance(this.chunks[this.chunkIdx]);
+            u.lang = 'en-US';
+            u.rate = 0.94;
+            u.onend = () => {
+                if (token !== this.sessionToken || this.state !== 'playing') return;
+                this.chunkIdx += 1;
+                this._speakNextChunk(token);
+            };
+            u.onerror = () => {
+                if (token !== this.sessionToken) return;
+                if (this.state === 'playing') {
+                    this.state = 'idle';
+                    this.activeOwner = null;
+                    this._syncButtons();
+                }
+            };
+            window.speechSynthesis.speak(u);
+        },
+
+        toggle(owner, text) {
+            if (!('speechSynthesis' in window)) {
+                if (window.showToast) showToast('当前浏览器不支持语音朗读', 'warning');
+                return;
+            }
+
+            // If this same owner is currently playing -> PAUSE
+            if (this.activeOwner === owner && this.state === 'playing') {
+                this.pause();
+                return;
+            }
+
+            // If this same owner is currently paused -> RESUME
+            if (this.activeOwner === owner && this.state === 'paused') {
+                this.resume();
+                return;
+            }
+
+            // Otherwise start fresh playback
+            const chunks = this._splitSentences(text);
+            if (!chunks.length) return;
+            this.stop(true);
+            this.sessionToken += 1;
+            const tok = this.sessionToken;
+            this.activeOwner = owner;
+            this.chunks = chunks;
+            this.chunkIdx = 0;
+            this.state = 'playing';
+            this._syncButtons();
+            this._speakNextChunk(tok);
+            if (window.showToast) showToast('正在朗读英文故事（可随时暂停或停止）', 'info');
+        },
+
+        pause() {
+            if (this.state !== 'playing') return;
+            this.state = 'paused';
+            this.sessionToken += 1;
+            try {
+                // Cancel active chunk cleanly so pausing works 100% reliably on Windows/Chrome/Safari;
+                // resume() will continue seamlessly from the current sentence chunk!
+                window.speechSynthesis.cancel();
+            } catch (e) {}
+            this._syncButtons();
+            if (window.showToast) showToast('已暂停朗读', 'info');
+        },
+
+        resume() {
+            if (this.state !== 'paused' || !this.chunks.length) return;
+            this.state = 'playing';
+            this.sessionToken += 1;
+            const tok = this.sessionToken;
+            this._syncButtons();
+            this._speakNextChunk(tok);
+            if (window.showToast) showToast('继续朗读...', 'info');
+        },
+
+        stop(silent = false) {
+            const wasActive = this.state !== 'idle';
+            this.sessionToken += 1;
+            this.state = 'idle';
+            this.activeOwner = null;
+            this.chunks = [];
+            this.chunkIdx = 0;
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch (e) {}
+            }
+            this._syncButtons();
+            if (!silent && wasActive && window.showToast) {
+                showToast('已停止朗读', 'info');
+            }
+        }
+    };
+
+    window.addEventListener('beforeunload', () => StorySpeech.stop(true));
+    window.StorySpeech = StorySpeech;
 })();

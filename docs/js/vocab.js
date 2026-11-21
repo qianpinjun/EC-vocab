@@ -353,6 +353,7 @@ const VocabModule = {
         const btnShuffle = document.getElementById('btnStudioShuffle');
         const btnAi = document.getElementById('btnStudioAi');
         const btnSpeak = document.getElementById('btnStudioSpeak');
+        const btnStop = document.getElementById('btnStudioStop');
         const btnCopy = document.getElementById('btnStudioCopy');
 
         if (btnOpen) {
@@ -361,42 +362,49 @@ const VocabModule = {
         if (btnClose && modal) {
             btnClose.addEventListener('click', () => {
                 modal.style.display = 'none';
-                if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                if (window.StorySpeech) StorySpeech.stop(true);
+                else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
             });
         }
         if (modal) {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     modal.style.display = 'none';
-                    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                    if (window.StorySpeech) StorySpeech.stop(true);
+                    else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                 }
             });
         }
         if (themeSel) {
-            themeSel.addEventListener('change', () => this.renderStudioCurated(themeSel.value));
+            themeSel.addEventListener('change', () => {
+                if (window.StorySpeech) StorySpeech.stop(true);
+                this.renderStudioCurated(themeSel.value);
+            });
         }
         if (btnShuffle) {
             btnShuffle.addEventListener('click', () => {
+                if (window.StorySpeech) StorySpeech.stop(true);
                 this.pickStudioWords(5);
                 this.renderStudioCurated(themeSel ? themeSel.value : 'journalism');
             });
         }
         if (btnAi) {
-            btnAi.addEventListener('click', () => this.runStudioLocalAI());
+            btnAi.addEventListener('click', () => {
+                if (window.StorySpeech) StorySpeech.stop(true);
+                this.runStudioLocalAI();
+            });
         }
         if (btnSpeak) {
             btnSpeak.addEventListener('click', () => {
-                if (!('speechSynthesis' in window)) {
-                    showToast('当前浏览器不支持语音朗读', 'warning');
-                    return;
-                }
-                window.speechSynthesis.cancel();
                 if (!this.studioStoryEnglish) return;
-                const u = new SpeechSynthesisUtterance(this.studioStoryEnglish);
-                u.lang = 'en-US';
-                u.rate = 0.94;
-                window.speechSynthesis.speak(u);
-                showToast('正在朗读英文故事...', 'info');
+                if (window.StorySpeech) {
+                    StorySpeech.toggle('studio', this.studioStoryEnglish);
+                }
+            });
+        }
+        if (btnStop) {
+            btnStop.addEventListener('click', () => {
+                if (window.StorySpeech) StorySpeech.stop();
             });
         }
         if (btnCopy) {

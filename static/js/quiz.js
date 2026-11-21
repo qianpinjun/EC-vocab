@@ -96,6 +96,13 @@ const QuizModule = {
             });
         }
 
+        const btnStop = document.getElementById('btnStopStory');
+        if (btnStop) {
+            btnStop.addEventListener('click', () => {
+                if (window.StorySpeech) StorySpeech.stop();
+            });
+        }
+
         const btnCopy = document.getElementById('btnCopyStory');
         if (btnCopy) {
             btnCopy.addEventListener('click', () => {
@@ -388,6 +395,7 @@ const QuizModule = {
 
     renderStoryPayload(story) {
         if (!story) return;
+        if (window.StorySpeech) StorySpeech.stop(true);
         document.getElementById('storyBookTitle').textContent = story.title || '错词语境融合小故事';
         const themeSel = document.getElementById('storyThemeSelect');
         if (themeSel && story.theme_id) {
@@ -490,6 +498,7 @@ const QuizModule = {
     },
 
     async startPenaltyNextRound() {
+        if (window.StorySpeech) StorySpeech.stop(true);
         if (this.autoNextTimer) {
             clearTimeout(this.autoNextTimer);
             this.autoNextTimer = null;
@@ -523,15 +532,17 @@ const QuizModule = {
     },
 
     speakStory() {
+        const textToRead = this.currentStoryEnglish || this.currentStoryText;
+        if (!textToRead) return;
+        if (window.StorySpeech) {
+            StorySpeech.toggle('quiz', textToRead);
+            return;
+        }
         if (!('speechSynthesis' in window)) {
             showToast('当前浏览器不支持语音朗读', 'warning');
             return;
         }
-
         window.speechSynthesis.cancel();
-        const textToRead = this.currentStoryEnglish || this.currentStoryText;
-        if (!textToRead) return;
-
         const utterance = new SpeechSynthesisUtterance(textToRead);
         utterance.lang = 'en-US';
         utterance.rate = 0.94;

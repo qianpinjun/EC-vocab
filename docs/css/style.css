@@ -2698,15 +2698,19 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
 }
 
 /* ==================== Visual QA Polish Fixes ==================== */
-/* Prevent toast notifications from covering the top-right header logout/user buttons */
+/* Place toast notifications cleanly at bottom-right so they NEVER cover header or modal close (X) buttons */
 .toast-stack {
-    top: 72px !important;
+    top: auto !important;
+    bottom: 1.25rem !important;
     right: 1.25rem !important;
 }
 
-/* Keep top nav items on a single clean line */
-#mainNav .segment-btn {
+/* Keep top nav items and logout button on a single clean line */
+#mainNav .segment-btn,
+#userHeaderBox,
+#btnLogout {
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Prevent Story Studio toolbar buttons from wrapping vertically or stretching the <select> */
@@ -2770,4 +2774,23 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     .lb-acc-bar {
         width: 52px;
     }
+}
+
+/* Story Speech Active / Stop Button Styling */
+.btn.is-speaking {
+    background: #eef7f2 !important;
+    border-color: var(--accent-primary) !important;
+    color: var(--accent-primary) !important;
+    font-weight: 700;
+}
+
+.btn-stop-speech {
+    background: #fdf2f2 !important;
+    border-color: #efc6c6 !important;
+    color: var(--state-error) !important;
+    font-weight: 600;
+}
+
+.btn-stop-speech:hover {
+    background: #fae2e2 !important;
 }

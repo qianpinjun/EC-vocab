@@ -23,6 +23,9 @@ function switchMode(mode, subTab = 'vocab') {
     if (mode !== 'grammar' && window.GrammarVideoPlayer) {
         GrammarVideoPlayer.stop();
     }
+    if (window.StorySpeech) {
+        StorySpeech.stop(true);
+    }
 
     if (portal) portal.style.display = mode === 'portal' ? 'block' : 'none';
     if (vocabWs) vocabWs.style.display = mode === 'vocab' ? 'block' : 'none';
@@ -190,6 +193,7 @@ function initAuth() {
                 QuizModule.autoNextTimer = null;
             }
             if (window.GrammarVideoPlayer) GrammarVideoPlayer.stop();
+            if (window.StorySpeech) StorySpeech.stop(true);
             VocabModule.reset();
             const startCard = document.getElementById('quizStartCard');
             const arena = document.getElementById('quizArena');
