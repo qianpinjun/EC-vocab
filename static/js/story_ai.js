@@ -6,90 +6,82 @@
     const STORY_THEMES = [
     {
         "id": "journalism",
-        "label": "校园新闻调查 (Campus Journalism)",
-        "title": "The Campus Chronicle Investigation · 校园新闻社深度调查",
-        "intro_en": "Late on a rainy Tuesday evening, student editor Maya Lin stayed behind in the Campus Chronicle newsroom to review a stack of city archives for her feature article.",
-        "intro_cn": "在一个下着雨的周二深夜，学生主编林玛雅独自留在《校园纪事报》编辑部里，翻阅一摞市政档案，准备撰写她的深度专题报道。",
-        "ending_en": "When the Friday edition went to print, Maya's clear-eyed reporting sparked an honest conversation across campus and reminded readers why careful facts matter.",
-        "ending_cn": "周五的校报正式付印后，玛雅冷静客观的报道在校园里引发了坦诚的讨论，也让读者重新意识到严谨事实的力量。"
+        "label": "校园新闻特刊 (Campus Chronicle)",
+        "title": "The Campus Chronicle Feature Issue · 校园新闻社专题手记",
+        "intro_en": "Late on a rainy Tuesday evening, student editor Maya Lin stayed in the Campus Chronicle newsroom to review the final drafts for her semester feature issue.",
+        "intro_cn": "在一个下着雨的周二深夜，学生主编林玛雅留在《校园纪事报》编辑部里，逐篇审阅本学期专题特刊的终稿。",
+        "ending_en": "When the Friday edition went to print, Maya's clear-eyed reporting connected every corner of campus life and reminded readers why accurate writing matters.",
+        "ending_cn": "周五的特刊正式付印后，玛雅冷静客观的报道串联起校园生活的各个角落，也让读者重新感受到严谨写作的力量。"
     },
     {
         "id": "debate",
-        "label": "辩论赛决赛 (Debate Finals)",
-        "title": "The Regional Debate Championship · 地区辩论赛决赛之夜",
-        "intro_en": "Inside the packed university auditorium, debate partners Daniel and Claire adjusted their microphones as the final round on public policy was about to begin.",
-        "intro_cn": "在座无虚席的大学礼堂里，辩论搭档丹尼尔和克莱尔调整好麦克风，围绕公共政策展开的总决赛即将打响。",
-        "ending_en": "After the judges announced their decision, both teams shook hands warmly, knowing that rigorous reasoning had sharpened everyone's perspective.",
-        "ending_cn": "评委宣布结果后，双方队员热情握手；大家都明白，严谨的思辨让每个人的视野都变得更加敏锐。"
+        "label": "辩论案例集 (Debate Casebook)",
+        "title": "Notes from the Debate Casebook · 辩论赛决赛案例笔记",
+        "intro_en": "Before the regional championship began, debate partners Daniel and Claire opened their casebook to review the real-world examples they planned to cite on stage.",
+        "intro_cn": "在地区辩论总决赛开赛前，搭档丹尼尔和克莱尔翻开案例手册，逐条复盘准备在台上引用的真实事例。",
+        "ending_en": "After the judges announced their decision, both teams shook hands warmly, knowing that careful evidence and clear reasoning had elevated the entire debate.",
+        "ending_cn": "评委宣布结果后，双方队员热情握手；大家都明白，扎实的例证与清晰的逻辑提升了整场辩论的水准。"
     },
     {
         "id": "harbor",
-        "label": "北港档案谜案 (Harbor Mystery)",
-        "title": "Storm Over Northport Harbor · 北港风暴夜的档案线索",
-        "intro_en": "As an autumn gale swept across Northport Harbor, young historian Owen Brooks opened a weathered wooden chest discovered beneath the old maritime museum.",
-        "intro_cn": "秋日大风席卷北港之际，年轻的历史学者欧文·布鲁克斯打开了在老海事博物馆地下室发现的一只斑驳木箱。",
-        "ending_en": "By sunrise, the storm had cleared over the bay, and the newly cataloged records finally restored an overlooked chapter of the town's history.",
-        "ending_cn": "破晓时分，海湾上空的风暴终于散去，这批重新编目的历史文献最终补全了这座海港小镇被遗忘的一页。"
+        "label": "北港档案志 (Harbor Archive)",
+        "title": "Pages from the Northport Archive · 北港档案馆秋日编目",
+        "intro_en": "As an autumn wind swept across Northport Harbor, young historian Owen Brooks cataloged a folder of civic records and letters preserved at the maritime museum.",
+        "intro_cn": "秋风掠过北港之际，年轻的历史学者欧文·布鲁克斯在海事博物馆里整理起一卷珍藏多年的市政档案与书信。",
+        "ending_en": "By dusk, the wind had quieted over the bay, and Owen's newly indexed records finally preserved these overlooked stories for future visitors.",
+        "ending_cn": "暮色降临时，海湾上空的秋风渐渐平息，欧文重新编目的档案也终于为后来的访客留存了这些曾被忽略的故事。"
     },
     {
         "id": "startup",
-        "label": "青年科创路演 (Youth Startup)",
-        "title": "The GreenTech Youth Challenge · 青年科创大赛路演日",
-        "intro_en": "Three days before the regional innovation showcase, engineering students Nora and Sam met in the studio to refine their clean-water prototype and budget.",
-        "intro_cn": "距离地区青年科创展示会还有三天，工科生诺拉和山姆聚集在工作室里，反复打磨他们的净水原型机与预算方案。",
-        "ending_en": "Walking out of the presentation hall that afternoon, the team felt proud not just of their working prototype, but of every hard lesson they had mastered along the way.",
-        "ending_cn": "那天下午走出路演大厅时，团队感到自豪的不仅是成功运转的原型机，更是这一路上学会的每一堂扎实功课。"
+        "label": "科创项目志 (Project Dossier)",
+        "title": "The Youth Innovation Dossier · 青年科创大赛备赛日志",
+        "intro_en": "Three days before the regional showcase, engineering students Nora and Sam reviewed their project dossier and field notes to make sure every claim held up.",
+        "intro_cn": "距离地区青年科创展示会还有三天，工科生诺拉和山姆翻阅项目档案与实地记录，确认每一项陈述都经得起检验。",
+        "ending_en": "Walking out of the presentation hall that afternoon, the team felt proud not only of their working prototype, but also of every lesson they had documented along the way.",
+        "ending_cn": "那天下午走出路演大厅时，团队感到自豪的不仅是成功运转的原型机，更是这一路上认真记录下来的每一堂功课。"
     },
     {
         "id": "memoir",
-        "label": "老城秋日手记 (Old Town Memoir)",
-        "title": "Autumn Letters from Old Town · 老城秋日手记",
-        "intro_en": "Returning to her hometown after a year abroad, Clara spent a quiet October afternoon walking past the familiar brick bookshops and neighborhood cafes.",
-        "intro_cn": "在海外求学一年后回到家乡，克拉拉在十月一个安静的午后，漫步经过熟悉的红砖书店与街角咖啡馆。",
-        "ending_en": "As dusk settled over the tree-lined street, Clara closed her notebook, grateful for how every encounter had quietly shaped the person she was becoming.",
-        "ending_cn": "暮色降临在林荫街道上，克拉拉合上笔记本，心怀感激——原来每一次相遇都在悄然塑造着正在成长的自己。"
+        "label": "老城秋日手记 (Town Chronicle)",
+        "title": "Autumn Entries from Old Town · 老城秋日见闻手记",
+        "intro_en": "Returning home after a year away, Clara sat by the window of a quiet brick cafe and reread the observations she had collected in her autumn journal.",
+        "intro_cn": "在外求学一年后回到家乡，克拉拉坐在安静的红砖咖啡馆窗边，重读自己在秋日手记里记录的点滴见闻。",
+        "ending_en": "As evening settled over the tree-lined avenue, Clara closed her notebook, grateful for how each small story had deepened her understanding of the people around her.",
+        "ending_cn": "夜色降临在林荫大道上，克拉拉合上笔记本，心怀感激——每一段细小的故事，都让她对身边的人与事有了更深的理解。"
     }
 ];
     const CONNECTORS = [
     [
-        "",
-        ""
+        "In the next section, ",
+        "在下一节记录中，"
+    ],
+    [
+        "Elsewhere in the notes, ",
+        "在笔记的另一处，"
+    ],
+    [
+        "In addition, ",
+        "此外，"
+    ],
+    [
+        "Further down the page, ",
+        "继续往下翻阅，"
     ],
     [
         "Meanwhile, ",
         "与此同时，"
     ],
     [
-        "Before long, ",
-        "没过多久，"
+        "Notably, ",
+        "值得注意的是，"
     ],
     [
-        "Looking closer, ",
-        "进一步细看，"
+        "In another entry, ",
+        "在另一则记录里，"
     ],
     [
-        "As the discussion deepened, ",
-        "随着讨论不断深入，"
-    ],
-    [
-        "Equally important, ",
-        "同样重要的是，"
-    ],
-    [
-        "Later that evening, ",
-        "当晚晚些时候，"
-    ],
-    [
-        "On closer inspection, ",
-        "仔细核查后，"
-    ],
-    [
-        "To make matters more revealing, ",
-        "更耐人寻味的是，"
-    ],
-    [
-        "At the same time, ",
-        "在同一时间，"
+        "Beyond that, ",
+        "除此之外，"
     ]
 ];
     const WORD_STORY_BEATS = {
@@ -262,8 +254,8 @@
         "醒目的横幅和免费体验工坊旨在“{MEANING_TAG}”路过的行人走进科学展览馆。"
     ],
     "erode": [
-        "repeated broken promises can quietly {WORD_TAG} public trust far faster than any single honest mistake.",
-        "一再失信会悄然“{MEANING_TAG}”公众信任，其破坏速度远胜于任何一次无心之失。"
+        "one editorial cautioned that repeated broken promises could quietly {WORD_TAG} public trust far faster than any single honest mistake.",
+        "一篇社论警示，一再失信会悄然“{MEANING_TAG}”公众信任，其破坏速度远胜于任何一次无心之失。"
     ],
     "farce": [
         "without a clear agenda or timekeeper, the early committee hearing nearly turned into a chaotic {WORD_TAG}.",
@@ -274,8 +266,8 @@
         "他急着收拾书桌时，差点把唯一能证明送达日期的那张收据随手“{MEANING_TAG}”了。"
     ],
     "flounder": [
-        "without structured notes, even a knowledgeable speaker can begin to {WORD_TAG} under rapid follow-up questions.",
-        "如果没有条理清晰的笔记，哪怕知识渊博的演讲者在连番追问下也可能开始“{MEANING_TAG}”。"
+        "the debate coach warned that without structured notes, even a knowledgeable speaker could easily {WORD_TAG} under rapid follow-up questions.",
+        "辩论教练提醒，如果没有条理清晰的笔记，哪怕知识渊博的发言者在连番追问下也很容易“{MEANING_TAG}”。"
     ],
     "forte": [
         "statistical modeling had always been Nora's {WORD_TAG}, so she naturally took charge of verifying the survey charts.",
@@ -314,8 +306,8 @@
         "气压的骤然下降，无疑是秋季狂风正扑向海湾的明显“{MEANING_TAG}”。"
     ],
     "hasty generalization": [
-        "judging an entire program from a single survey response was flagged by the coach as a classic {WORD_TAG}.",
-        "仅凭一份问卷反馈就评判整个项目，被教练点名指为典型的“{MEANING_TAG}”。"
+        "the coach flagged one survey claim as a classic {WORD_TAG} because it judged an entire program from a single response.",
+        "教练将其中一条仅凭单份问卷就评判整个项目的结论点名为典型的“{MEANING_TAG}”。"
     ],
     "havoc": [
         "a burst water main on Main Street wreaked {WORD_TAG} on the morning commute and delayed two deliveries.",
@@ -422,15 +414,15 @@
         "在实习选拔中采用匿名简历筛选，正是为了彻底消除人们对“{MEANING_TAG}”的任何疑虑。"
     ],
     "non-sequitur": [
-        "claiming that a longer lunch break would lower library late fees was quickly called out as a {WORD_TAG}.",
-        "声称延长午休时间就能减少图书馆逾期费，这一说法很快被指为“{MEANING_TAG}”。"
+        "the moderator pointed out an obvious {WORD_TAG} when someone argued that a longer lunch break would lower library late fees.",
+        "有人声称延长午休时间就能降低图书馆逾期费，主持人当场指出这是一个明显的“{MEANING_TAG}”。"
     ],
     "notorious": [
         "the steep coastal bend was {WORD_TAG} for sudden fog banks that could cut visibility to a few yards.",
         "那处陡峭的海岸弯道因突发浓雾而“{MEANING_TAG}”，能见度常会在瞬间降至几码之内。"
     ],
     "of one's own accord": [
-        "the ethics professor reminded the class that true integrity means correcting a mistake {WORD_TAG}, not waiting to be caught.",
+        "the ethics professor reminded the class that true integrity meant correcting a mistake {WORD_TAG} rather than waiting to be caught.",
         "伦理学教授提醒全班，真正的正直在于“{MEANING_TAG}”改正错误，而不是等到被发现才行动。"
     ],
     "on the warpath": [
@@ -442,8 +434,8 @@
         "在期末周经历通宵停电，对整栋宿舍楼来说都是一场难忘的“{MEANING_TAG}”。"
     ],
     "overbearing": [
-        "a collaborative leader listens carefully rather than adopting an {WORD_TAG} tone that silences quieter teammates.",
-        "善于协作的领导者会认真倾听，而不是用“{MEANING_TAG}”的语气让性格内向的队友噤声。"
+        "the faculty adviser noted that a collaborative leader listened carefully instead of adopting an {WORD_TAG} tone that silenced quieter teammates.",
+        "指导老师指出，善于协作的领导者会认真倾听，而不会用“{MEANING_TAG}”的语气让性格内向的队友噤声。"
     ],
     "overture": [
         "the student council's invitation to hold a joint forum was welcomed as a sincere {WORD_TAG} toward compromise.",
@@ -454,12 +446,12 @@
         "新学期开始前，四位学习伙伴立下了一份安静的“{MEANING_TAG}”：每周四晚一起复习笔记。"
     ],
     "pamper": [
-        "good mentors challenge students to grow instead of trying to {WORD_TAG} them with easy praise alone.",
-        "优秀的导师会激励学生不断成长，而不会一味用廉价的表扬去“{MEANING_TAG}”他们。"
+        "the department chair emphasized that dedicated mentors challenged students to grow instead of trying to {WORD_TAG} them with easy praise alone.",
+        "系主任强调，优秀的导师会激励学生不断成长，而不会一味用廉价的表扬去“{MEANING_TAG}”他们。"
     ],
     "parasite": [
-        "biology notes on the board explained how a {WORD_TAG} draws nutrients from its host without giving anything back.",
-        "黑板上的生物学笔记解释了“{MEANING_TAG}”如何只从宿主身上汲取养分，却不提供任何回报。"
+        "biology notes on the chalkboard illustrated how a {WORD_TAG} drew nutrients from its host without giving anything back.",
+        "黑板上的生物学笔记图解了“{MEANING_TAG}”如何只从宿主身上汲取养分，却不提供任何回报。"
     ],
     "parch": [
         "weeks without rain had begun to {WORD_TAG} the hillside orchards, prompting farmers to conserve every drop of irrigation water.",
@@ -502,8 +494,8 @@
         "博物馆展牌展示了战时“{MEANING_TAG}”如何教会当地家庭在厨房里发挥惊人的巧思。"
     ],
     "red herring": [
-        "bringing up cafeteria paint colors during a budget hearing was immediately recognized as a {WORD_TAG}.",
-        "在预算听证会上突然提起食堂墙壁的颜色，立刻被大家识破是在抛出一枚“{MEANING_TAG}”。"
+        "the treasurer recognized a classic {WORD_TAG} when a speaker suddenly brought up cafeteria paint colors during a budget hearing.",
+        "当发言者在预算听证会上突然提起食堂墙壁颜色时，财务干事立刻识破这是一枚典型的“{MEANING_TAG}”。"
     ],
     "redouble": [
         "encouraged by the judges' constructive notes, the finalists vowed to {WORD_TAG} their efforts before next month's showcase.",
@@ -558,12 +550,12 @@
         "僵持两小时后，一份关于共享实验室时段的新折中方案终于打破了“{MEANING_TAG}”。"
     ],
     "stifle": [
-        "healthy classrooms invite thoughtful questions instead of letting rigid rules {WORD_TAG} genuine curiosity.",
-        "健康的课堂鼓励深思熟虑的提问，而不会让死板的条框去“{MEANING_TAG}”真正的好奇心。"
+        "her column argued that healthy classrooms welcomed thoughtful questions instead of letting rigid rules {WORD_TAG} genuine curiosity.",
+        "她的专栏指出，健康的课堂欢迎深思熟虑的提问，而不会让死板的条框去“{MEANING_TAG}”真正的好奇心。"
     ],
     "strawman argument": [
-        "claiming that her opponent wanted to ban all technology—when he had only proposed screen breaks—was a textbook {WORD_TAG}.",
-        "对方明明只是建议安排用眼休息，却曲解成他要全面禁止科技产品，这正是教科书般的“{MEANING_TAG}”。"
+        "the judge identified a textbook {WORD_TAG} when one speaker claimed her opponent wanted to ban all technology instead of merely proposing screen breaks.",
+        "对方明明只是建议安排用眼休息，却被曲解成要全面禁止科技产品，评委一眼认出这是教科书般的“{MEANING_TAG}”。"
     ],
     "surplus": [
         "thanks to careful planning, the charity bake sale ended with a welcome {WORD_TAG} that went straight to the scholarship fund.",
@@ -594,8 +586,8 @@
         "考虑到宿舍区附近的噪音问题，宿管委员会投票决定“{MEANING_TAG}”这项深夜施工许可。"
     ],
     "vindictive": [
-        "holding onto a {WORD_TAG} grudge only clouds judgment when a team needs to move forward together.",
-        "在团队需要携手前行时，怀揣“{MEANING_TAG}”的怨恨只会蒙蔽理性的判断。"
+        "the counselor observed that holding onto a {WORD_TAG} grudge only clouded judgment when a team needed to move forward together.",
+        "辅导老师感叹，在团队需要携手前行时，怀揣“{MEANING_TAG}”的怨恨只会蒙蔽理性的判断。"
     ],
     "visual display": [
         "a crisp {WORD_TAG} at the front of the hall mapped every water-quality reading across the county in real time.",
@@ -778,6 +770,16 @@
         return out;
     }
 
+    const LEADING_CLAUSE_RE = /^(when|while|although|though|after|before|during|without|despite|rather|even|instead|by|for|in|at|on|over|under|with|unlike|according|thanks|compared|since|because|as|beneath|along|from|to|until|once|if)\b/i;
+
+    function hasLeadingClause(sentence) {
+        const s = String(sentence || '').trim();
+        if (!s) return true;
+        if (LEADING_CLAUSE_RE.test(s)) return true;
+        const firstComma = s.indexOf(',');
+        return firstComma > 0 && firstComma <= 70;
+    }
+
     function buildCuratedBeat(wItem, idx, useConnector) {
         const wKey = wItem.word.toLowerCase();
         const glossCn = cleanCnGloss(wItem.meaning);
@@ -792,7 +794,8 @@
 
         const tplEn = pair[0];
         const tplCn = pair[1];
-        const conn = (useConnector && idx > 0) ? CONNECTORS[idx % CONNECTORS.length] : ['', ''];
+        const shouldConn = Boolean(useConnector && idx > 0 && !hasLeadingClause(tplEn));
+        const conn = shouldConn ? CONNECTORS[idx % CONNECTORS.length] : ['', ''];
         const rawEn = conn[0] ? (conn[0] + tplEn) : capFirst(tplEn);
         const rawCn = conn[1] ? (conn[1] + tplCn) : tplCn;
 
@@ -1047,27 +1050,28 @@
                 {
                     role: 'system',
                     content:
-                        'You are an experienced high school English writing teacher. ' +
-                        'Write a cohesive, realistic, grammatically correct English short story (2 short paragraphs, about 110-150 words total) ' +
-                        'that uses every requested vocabulary word naturally in context. ' +
-                        'Keep the tone realistic and classroom-appropriate (no silly sci-fi or absurd jokes). ' +
-                        'After the English story, write a line containing ONLY "---CN---" and then a fluent Chinese translation of the story.'
+                        'You are an experienced AP English writing teacher. ' +
+                        'Write ONE cohesive, realistic, grammatically spotless short story in consistent past tense ' +
+                        '(2 short paragraphs, 110-150 words total) set in a single continuous scene. ' +
+                        'Strict grammar rules: use every target word with its exact natural English part of speech and collocation, ' +
+                        'keep verb tenses consistent (past tense throughout), avoid dangling modifiers, and keep the tone classroom-ready (zero absurd sci-fi jokes). ' +
+                        'After the English story, output a line containing ONLY "---CN---" followed by a fluent, accurate Chinese translation.'
                 },
                 {
                     role: 'user',
                     content:
-                        `Setting: ${setting}.\n` +
-                        `Target vocabulary words to include naturally:\n${wordLines}\n\n` +
-                        `Write the 2-paragraph English story, then "---CN---", then the Chinese translation.`
+                        `Single continuous scene: ${setting}.\n` +
+                        `Target vocabulary words (use EVERY word naturally with correct grammar):\n${wordLines}\n\n` +
+                        `Write the 2-paragraph past-tense English story, then "---CN---", then the Chinese translation.`
                 }
             ];
 
             const output = await pipe(messages, {
-                max_new_tokens: 380,
+                max_new_tokens: 420,
                 do_sample: true,
-                temperature: 0.55,
-                top_p: 0.9,
-                repetition_penalty: 1.12
+                temperature: 0.4,
+                top_p: 0.88,
+                repetition_penalty: 1.1
             });
 
             let rawReply = '';
