@@ -359,7 +359,7 @@
       "phonetic": "/dɪˈmjʊə(r)/",
       "example_en": "She wore a demure long dress to the party.",
       "example_cn": "她身穿一袭端庄娴静的长裙参加聚会。",
-      "wrong_count": 1,
+      "wrong_count": 0,
       "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-09 11:00:02"
@@ -1712,7 +1712,7 @@
       "example_en": "The survivors were physically exhausted by their harrowing sea ordeal.",
       "example_cn": "幸存者们经历了一场惊心动魄的海上磨难折磨，身体极度透支。",
       "wrong_count": 0,
-      "correct_count": 1,
+      "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-09 11:00:02"
     },
@@ -2544,8 +2544,8 @@
       "example_en": "Be sure to allow adequate time to check in at the airport.",
       "example_cn": "去机场时务必预留出充足的时间办理登机手续。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2570,8 +2570,8 @@
       "example_en": "That night, the children foolishly left the back gate ajar, and the dog escaped.",
       "example_cn": "那天晚上孩子们糊涂地把后门半开着，结果小狗溜了出去。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2596,8 +2596,8 @@
       "example_en": "The witty dialogue in the play kept the audience amused throughout.",
       "example_cn": "剧中机智幽默的对白让全场观众捧腹大笑。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2622,8 +2622,8 @@
       "example_en": "Like the heart, the red rose is an emblem of love.",
       "example_cn": "就像爱心一样，红玫瑰也是爱情的象征。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2648,8 +2648,8 @@
       "example_en": "When it fell to Earth, the meteorite made a gigantic hole in the ground.",
       "example_cn": "当陨石坠落地球时，在地面上砸出了一个巨大的深坑。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2673,9 +2673,9 @@
       "phonetic": "/ˈhævək/",
       "example_en": "The monkey created havoc at the fair as soon as it broke from its leash.",
       "example_cn": "猴子一挣脱皮带，就在集市上造成了一场大混乱。",
-      "wrong_count": 1,
-      "correct_count": 3,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2699,9 +2699,9 @@
       "phonetic": "/hɑːrθ/",
       "example_en": "It was our custom to sit by the hearth and listen to my grandfather's stories.",
       "example_cn": "围坐在温暖的壁炉旁听祖父讲故事曾是我们家的温馨传统。",
-      "wrong_count": 1,
-      "correct_count": 3,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2725,9 +2725,9 @@
       "phonetic": "/ɪmˈplɔːr/",
       "example_en": "The attorney proceeded to implore the judge to show his client mercy.",
       "example_cn": "律师接着恳求法官对他的当事人给予宽恕。",
-      "wrong_count": 2,
-      "correct_count": 2,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2752,8 +2752,8 @@
       "example_en": "Because of the outlaw's infamous deeds, the town was offering a large bounty for his capture.",
       "example_cn": "鉴于那名逃犯臭名昭著的恶行，镇里开出了重金悬赏缉捕他。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2778,8 +2778,8 @@
       "example_en": "The landlord heard innumerable complaints about the noisy new tenant.",
       "example_cn": "房东收到了无数起关于那个吵闹新房客的投诉。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2804,8 +2804,8 @@
       "example_en": "Some players took advantage of the new coach's somewhat lax control of the team.",
       "example_cn": "一些队员利用了新教练对球队有些松懈的管理。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2829,9 +2829,9 @@
       "phonetic": "/mɑːr/",
       "example_en": "Spilled cleaning fluid will surely mar the wooden tabletop.",
       "example_cn": "洒出来的清洁液肯定会损坏木质桌面。",
-      "wrong_count": 2,
-      "correct_count": 2,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2856,8 +2856,8 @@
       "example_en": "He was not only fined for the misdemeanor, but also sentenced to serve 30 days in jail.",
       "example_cn": "他不仅因这起轻罪被处以罚款，还被判入狱服刑30天。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2882,8 +2882,8 @@
       "example_en": "The governor had some time to mull over the bill before signing it into law.",
       "example_cn": "州长在签署法案生效前，还有时间仔细推敲琢磨。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2907,9 +2907,9 @@
       "phonetic": "/ˈnærətɪv/",
       "example_en": "The narrative of the West African captive gives us a vivid picture of the horrors aboard a slave ship.",
       "example_cn": "西非俘虏的叙述为我们生动揭示了奴隶船上的悲惨景象。",
-      "wrong_count": 1,
-      "correct_count": 3,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2933,9 +2933,9 @@
       "phonetic": "/ˈəʊvətʃʊər/",
       "example_en": "Our family enjoyed the overture to the opera better than the rest of it.",
       "example_cn": "比起歌剧的其他部分，我们全家更享受它的前奏序曲。",
-      "wrong_count": 1,
-      "correct_count": 3,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2960,8 +2960,8 @@
       "example_en": "All the nations signed the pact after the war in an effort to ensure world peace.",
       "example_cn": "战后所有国家都签署了该项和平条约，力图维护世界和平。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -2986,8 +2986,8 @@
       "example_en": "The negotiations ended in stalemate, as both sides refused to budge on the main issue.",
       "example_cn": "由于双方在核心问题上均拒绝让步，谈判最终以僵局收场。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -3011,9 +3011,9 @@
       "phonetic": "/vɪnˈdɪktɪv/",
       "example_en": "The mayor was so vindictive that he threatened to sue the newspaper for its unflattering remarks.",
       "example_cn": "市长报复心极强，甚至威胁要起诉那家对其施政做出负面报道的报社。",
-      "wrong_count": 2,
-      "correct_count": 2,
-      "mastered": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -3038,8 +3038,8 @@
       "example_en": "Intense heat or lack of water will wilt the delicate flowers quickly.",
       "example_cn": "酷热的高温或缺乏水源会使娇嫩的花朵迅速枯萎凋谢。",
       "wrong_count": 0,
-      "correct_count": 4,
-      "mastered": 1,
+      "correct_count": 0,
+      "mastered": 0,
       "created_at": "2026-11-10 11:01:14"
     },
     {
@@ -3063,8 +3063,8 @@
       "phonetic": "/ʌp/",
       "example_en": "Look up at the stars shining in the night sky.",
       "example_cn": "抬头向上看夜空中闪烁的繁星。",
-      "wrong_count": 1,
-      "correct_count": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-10 11:07:21"
     },
@@ -3076,8 +3076,8 @@
       "phonetic": "/daʊn/",
       "example_en": "Please sit down and take a rest after the walk.",
       "example_cn": "散步之后请坐下休息片刻。",
-      "wrong_count": 1,
-      "correct_count": 1,
+      "wrong_count": 0,
+      "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-10 11:07:21"
     },
@@ -3089,7 +3089,7 @@
       "phonetic": "/left/",
       "example_en": "Turn left at the next street intersection.",
       "example_cn": "在下一个街道十字路口向左拐。",
-      "wrong_count": 2,
+      "wrong_count": 0,
       "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-10 11:07:21"
@@ -3102,7 +3102,7 @@
       "phonetic": "/raɪt/",
       "example_en": "Raise your right hand if you agree with the proposal.",
       "example_cn": "如果你赞同这项提议，请举起你的右手。",
-      "wrong_count": 2,
+      "wrong_count": 0,
       "correct_count": 0,
       "mastered": 0,
       "created_at": "2026-11-10 11:07:21"

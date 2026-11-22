@@ -99,7 +99,20 @@ function cloneSeedData() {
     const seed = window.EC_SEED_DATA || { lists: [], words: [] };
     return {
         lists: seed.lists.map(l => ({ ...l })),
-        words: seed.words.map(w => ({ ...w }))
+        words: seed.words.map(w => ({
+            ...w,
+            wrong_count: 0,
+            correct_count: 0,
+            mastered: 0
+        })),
+        stats: {
+            vocab_reviewed: 0,
+            vocab_correct: 0,
+            grammar_completed: 0,
+            grammar_correct: 0,
+            grammar_unique_ids: [],
+            seed_scrubbed_v1: true
+        }
     };
 }
 
@@ -537,7 +550,7 @@ function generateAbsurdStory(errorWords, themeId = null) {
 // ----------------- Client-Side API -----------------
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD_SHA256 = '768225fadf33c3388e839585c03e9e55b3e85b944506a7dde36ff1b5ad71f5e3';
-const ADMIN_TEMPLATE_KEY = 'ec_admin_template_v1';
+const ADMIN_TEMPLATE_KEY = 'ec_admin_template_v2';
 
 function loadAdminTemplate() {
     try {
@@ -602,7 +615,8 @@ const API = {
             const accounts = loadLocalAccounts();
 
             if (key === ADMIN_USERNAME) {
-                if (!accounts[key]) {
+                const needResetAdmin = !accounts[key] || !accounts[key].data || !accounts[key].data.stats || !accounts[key].data.stats.seed_scrubbed_v1;
+                if (needResetAdmin) {
                     accounts[key] = {
                         username: ADMIN_USERNAME,
                         email: 'admin@school.admin',
@@ -668,12 +682,13 @@ const API = {
                 if (pwHash !== ADMIN_PASSWORD_SHA256) {
                     throw new Error('管理员密码错误');
                 }
+                const hasCleanAdmin = accounts[key] && accounts[key].data && accounts[key].data.stats && accounts[key].data.stats.seed_scrubbed_v1;
                 accounts[key] = {
                     username: ADMIN_USERNAME,
                     email: 'admin@school.admin',
                     password_hash: ADMIN_PASSWORD_SHA256,
                     is_admin: true,
-                    data: accounts[key] && accounts[key].data ? accounts[key].data : loadAdminTemplate()
+                    data: hasCleanAdmin ? accounts[key].data : loadAdminTemplate()
                 };
                 saveLocalAccounts(accounts);
                 setSessionUsername(ADMIN_USERNAME);
@@ -1066,8 +1081,8 @@ const API = {
                         data: localData,
                         updated_at: (localData && localData.stats && localData.stats.last_active_at) || ''
                     });
-                } else if (k === me && localData && localData.stats) {
-                    // Prefer the current user's freshest local stats if cloud write is still settling
+                } else if (k === me && localData && localData.stats && localData.stats.seed_scrubbed_v1) {
+                    // Prefer the current user's freshest scrubbed local stats if cloud write is still settling
                     const existing = mergedMap.get(k);
                     const exStats = (existing.data && existing.data.stats) || {};
                     const locTotal = Number(localData.stats.vocab_reviewed || 0) + Number(localData.stats.grammar_completed || 0);

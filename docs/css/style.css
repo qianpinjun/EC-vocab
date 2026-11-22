@@ -2290,6 +2290,7 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     text-align: right;
     font-size: 0.82rem;
     color: var(--text-muted);
+    white-space: nowrap;
 }
 
 .lb-row-me {
