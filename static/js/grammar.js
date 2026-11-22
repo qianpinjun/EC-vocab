@@ -9,6 +9,114 @@ const GrammarVideoPlayer = {
     sceneStartTime: 0,
     speakEnabled: false,
     onComplete: null,
+    loadSeq: 0,
+    realControlsBound: false,
+    speeds: [1.0, 1.25, 0.75],
+    speedIndex: 0,
+
+    fmtSec(sec) {
+        const s = Number.isFinite(sec) && sec > 0 ? Math.floor(sec) : 0;
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+    },
+
+    bindRealVideoControls() {
+        if (this.realControlsBound) return;
+        const realVideo = document.getElementById('gRealVideoEl');
+        const playBtn = document.getElementById('gRealPlayBtn');
+        const replayBtn = document.getElementById('gRealReplayBtn');
+        const seekBar = document.getElementById('gRealSeekBar');
+        const timeText = document.getElementById('gRealTimeText');
+        const speedBtn = document.getElementById('gRealSpeedBtn');
+        const muteBtn = document.getElementById('gRealMuteBtn');
+        const loadingOverlay = document.getElementById('gVideoLoadingOverlay');
+        if (!realVideo) return;
+        this.realControlsBound = true;
+
+        const syncPlayIcon = () => {
+            if (!playBtn) return;
+            playBtn.innerHTML = realVideo.paused
+                ? '<i class="fa-solid fa-play"></i>'
+                : '<i class="fa-solid fa-pause"></i>';
+        };
+        const syncMuteIcon = () => {
+            if (!muteBtn) return;
+            muteBtn.innerHTML = realVideo.muted || realVideo.volume === 0
+                ? '<i class="fa-solid fa-volume-xmark"></i>'
+                : '<i class="fa-solid fa-volume-high"></i>';
+        };
+        const syncTime = () => {
+            const dur = Number.isFinite(realVideo.duration) ? realVideo.duration : 0;
+            const cur = Number.isFinite(realVideo.currentTime) ? realVideo.currentTime : 0;
+            if (timeText) timeText.textContent = `${this.fmtSec(cur)} / ${this.fmtSec(dur)}`;
+            if (seekBar && dur > 0) {
+                seekBar.value = String(Math.round((cur / dur) * 1000));
+            }
+        };
+
+        realVideo.addEventListener('play', syncPlayIcon);
+        realVideo.addEventListener('pause', syncPlayIcon);
+        realVideo.addEventListener('ended', syncPlayIcon);
+        realVideo.addEventListener('volumechange', syncMuteIcon);
+        realVideo.addEventListener('timeupdate', syncTime);
+        realVideo.addEventListener('loadedmetadata', syncTime);
+        realVideo.addEventListener('loadeddata', () => {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            syncTime();
+        });
+        realVideo.addEventListener('canplay', () => {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+        });
+        realVideo.addEventListener('waiting', () => {
+            if (realVideo.getAttribute('src') && loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+            }
+        });
+        realVideo.addEventListener('playing', () => {
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            syncPlayIcon();
+        });
+        realVideo.addEventListener('click', () => {
+            if (realVideo.paused) realVideo.play().catch(() => {});
+            else realVideo.pause();
+        });
+
+        if (playBtn) {
+            playBtn.onclick = () => {
+                if (realVideo.paused) realVideo.play().catch(() => {});
+                else realVideo.pause();
+            };
+        }
+        if (replayBtn) {
+            replayBtn.onclick = () => {
+                realVideo.currentTime = 0;
+                realVideo.play().catch(() => {});
+            };
+        }
+        if (seekBar) {
+            seekBar.addEventListener('input', () => {
+                const dur = Number.isFinite(realVideo.duration) ? realVideo.duration : 0;
+                if (dur > 0) {
+                    realVideo.currentTime = (Number(seekBar.value) / 1000) * dur;
+                }
+            });
+        }
+        if (speedBtn) {
+            speedBtn.onclick = () => {
+                this.speedIndex = (this.speedIndex + 1) % this.speeds.length;
+                const rate = this.speeds[this.speedIndex];
+                realVideo.playbackRate = rate;
+                speedBtn.textContent = `${rate.toFixed(rate === 1 ? 1 : 2).replace(/0$/, '')}x`;
+            };
+        }
+        if (muteBtn) {
+            muteBtn.onclick = () => {
+                realVideo.muted = !realVideo.muted;
+                syncMuteIcon();
+            };
+        }
+    },
 
     bindControls() {
         const btnPlay = document.getElementById('gVideoPlayBtn');
@@ -62,41 +170,20 @@ const GrammarVideoPlayer = {
         return window.EC_SEED_DATA ? './videos' : '/static/videos';
     },
 
-    async load(scenes, title, onComplete = null, videoId = null) {
-        this.stop();
-        this.scenes = scenes || [];
-        this.onComplete = onComplete;
-        const headerTitle = document.getElementById('gVideoTitle');
-        if (headerTitle) headerTitle.textContent = title || 'Quick Reminder Video';
-
+    showFallbackSlides() {
+        const realWrap = document.getElementById('gRealVideoWrap');
         const realVideo = document.getElementById('gRealVideoEl');
+        const loadingOverlay = document.getElementById('gVideoLoadingOverlay');
         const fallbackWrap = document.getElementById('gVideoFallbackWrap');
         const dotsWrap = document.getElementById('gVideoDots');
-        const stepCounter = document.getElementById('gVideoStepText');
 
-        // Try loading pre-rendered kinetic 24fps MP4 video first
-        if (videoId && realVideo) {
-            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=2`;
-            try {
-                const headRes = await fetch(mp4Url, { method: 'HEAD' });
-                if (headRes.ok) {
-                    if (fallbackWrap) fallbackWrap.style.display = 'none';
-                    if (dotsWrap) dotsWrap.style.display = 'none';
-                    if (stepCounter) stepCounter.textContent = '24fps MP4 · AI 语音';
-                    realVideo.style.display = 'block';
-                    realVideo.src = mp4Url;
-                    realVideo.play().catch(() => {});
-                    return;
-                }
-            } catch (e) {}
-        }
-
-        // Fallback to interactive animated slides if MP4 not yet downloaded
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
         if (realVideo) {
             realVideo.pause();
             realVideo.removeAttribute('src');
-            realVideo.style.display = 'none';
+            realVideo.load();
         }
+        if (realWrap) realWrap.style.display = 'none';
         if (fallbackWrap) fallbackWrap.style.display = 'block';
         if (dotsWrap) dotsWrap.style.display = 'flex';
 
@@ -104,6 +191,89 @@ const GrammarVideoPlayer = {
         this.renderTimelineDots();
         if (this.scenes.length > 0) {
             this.loadScene(0, true);
+        }
+    },
+
+    async load(scenes, title, onComplete = null, videoId = null) {
+        const mySeq = ++this.loadSeq;
+        this.stop();
+        this.bindRealVideoControls();
+        this.scenes = scenes || [];
+        this.onComplete = onComplete;
+        const headerTitle = document.getElementById('gVideoTitle');
+        if (headerTitle) headerTitle.textContent = title || 'Quick Reminder Video';
+
+        const realWrap = document.getElementById('gRealVideoWrap');
+        const realVideo = document.getElementById('gRealVideoEl');
+        const loadingOverlay = document.getElementById('gVideoLoadingOverlay');
+        const fallbackWrap = document.getElementById('gVideoFallbackWrap');
+        const dotsWrap = document.getElementById('gVideoDots');
+        const stepCounter = document.getElementById('gVideoStepText');
+        const seekBar = document.getElementById('gRealSeekBar');
+        const timeText = document.getElementById('gRealTimeText');
+
+        // Immediately clear any previous video frame so stale frames NEVER flash
+        if (realVideo) {
+            realVideo.pause();
+            realVideo.removeAttribute('src');
+            realVideo.load();
+            realVideo.playbackRate = this.speeds[this.speedIndex] || 1.0;
+        }
+        if (seekBar) seekBar.value = '0';
+        if (timeText) timeText.textContent = '0:00 / 0:00';
+
+        // Try loading pre-rendered kinetic 24fps MP4 video first
+        if (videoId && realVideo && realWrap) {
+            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=3`;
+            if (fallbackWrap) fallbackWrap.style.display = 'none';
+            if (dotsWrap) dotsWrap.style.display = 'none';
+            if (stepCounter) stepCounter.textContent = '24fps MP4 · AI 语音';
+            realWrap.style.display = 'block';
+            if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            const loadedOk = await new Promise((resolve) => {
+                let settled = false;
+                const finish = (ok) => {
+                    if (settled) return;
+                    settled = true;
+                    realVideo.removeEventListener('loadeddata', onReady);
+                    realVideo.removeEventListener('canplay', onReady);
+                    realVideo.removeEventListener('error', onErr);
+                    clearTimeout(timeoutId);
+                    resolve(ok);
+                };
+                const onReady = () => finish(true);
+                const onErr = () => finish(false);
+                const timeoutId = setTimeout(() => finish(realVideo.readyState >= 2), 6000);
+
+                realVideo.addEventListener('loadeddata', onReady, { once: true });
+                realVideo.addEventListener('canplay', onReady, { once: true });
+                realVideo.addEventListener('error', onErr, { once: true });
+                realVideo.src = mp4Url;
+                realVideo.load();
+            });
+
+            if (mySeq !== this.loadSeq) return; // superseded by newer load()
+
+            if (loadedOk) {
+                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                realVideo.currentTime = 0;
+                realVideo.play().catch(() => {
+                    // Autoplay blocked by browser policy: video first frame is ready & visible, user can click Play
+                });
+                return;
+            }
+        }
+
+        if (mySeq !== this.loadSeq) return;
+        this.showFallbackSlides();
+    },
+
+    pauseMedia() {
+        this.pause();
+        const realVideo = document.getElementById('gRealVideoEl');
+        if (realVideo && !realVideo.paused) {
+            realVideo.pause();
         }
     },
 
@@ -215,9 +385,15 @@ const GrammarVideoPlayer = {
         this.pause();
         const fill = document.getElementById('gVideoProgressFill');
         if (fill) fill.style.width = '0%';
+        const loadingOverlay = document.getElementById('gVideoLoadingOverlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
         const realVideo = document.getElementById('gRealVideoEl');
         if (realVideo) {
             realVideo.pause();
+            if (realVideo.getAttribute('src')) {
+                realVideo.removeAttribute('src');
+                realVideo.load();
+            }
         }
     },
 
@@ -436,11 +612,23 @@ const GrammarModule = {
 
         const btnCloseMistakeVideo = document.getElementById('btnCloseMistakeVideo');
         if (btnCloseMistakeVideo) {
-            btnCloseMistakeVideo.onclick = () => {
-                GrammarVideoPlayer.stop();
-                const modal = document.getElementById('mistakeVideoModal');
-                if (modal) modal.style.display = 'none';
-            };
+            btnCloseMistakeVideo.onclick = () => this.closeMistakeModal();
+        }
+
+        const mistakeModal = document.getElementById('mistakeVideoModal');
+        if (mistakeModal) {
+            mistakeModal.addEventListener('click', (e) => {
+                if (e.target === mistakeModal) this.closeMistakeModal();
+            });
+        }
+
+        const btnTabVideo = document.getElementById('btnMistakeTabVideo');
+        if (btnTabVideo) {
+            btnTabVideo.onclick = () => this.switchMistakeModalTab('video');
+        }
+        const btnTabKp = document.getElementById('btnMistakeTabKp');
+        if (btnTabKp) {
+            btnTabKp.onclick = () => this.switchMistakeModalTab('kp');
         }
 
         const combineInput = document.getElementById('gCombineInput');
@@ -778,6 +966,7 @@ const GrammarModule = {
         this.mistakes.forEach((m, idx) => {
             const q = m.question;
             const mm = q.mindMap || {};
+            const topic = this.findTopicForQuestion(q);
             const origText = q.type === 'multi' ? q.sentence : (q.sentences || []).join(' + ');
             const correctDisplay = q.type === 'multi' ? q.correctAnswers.join(' / ') : q.sampleAnswer;
 
@@ -785,16 +974,22 @@ const GrammarModule = {
             card.className = 'content-card g-mistake-card';
             card.innerHTML = `
                 <div class="g-mistake-head">
-                    <div>
+                    <div class="g-mistake-tags">
                         <span class="round-tag">错题 #${idx + 1}</span>
-                        <span class="domain-tag">${q.sourceTag || 'Packet 4'}</span>
+                        <span class="domain-tag">${gEscapeHtml(q.sourceTag || 'Packet 4')}</span>
+                        ${topic ? `<span class="g-kp-mini-tag">KP ${gEscapeHtml(topic.number)} · ${gEscapeHtml(topic.badge)}</span>` : ''}
                     </div>
-                    <button type="button" class="btn btn-primary btn-sm btn-watch-mistake-video">
-                        <i class="fa-solid fa-clapperboard"></i> 观看本题视频讲解
-                    </button>
+                    <div class="g-mistake-actions">
+                        <button type="button" class="btn btn-secondary btn-sm btn-view-mistake-kp">
+                            <i class="fa-solid fa-book-open"></i> 语法知识点
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm btn-watch-mistake-video">
+                            <i class="fa-solid fa-clapperboard"></i> 观看本题视频讲解
+                        </button>
+                    </div>
                 </div>
 
-                <div class="g-mistake-orig">${origText}</div>
+                <div class="g-mistake-orig">${gEscapeHtml(origText)}</div>
 
                 <div class="g-answer-compare">
                     <div class="g-ans-box wrong">
@@ -811,33 +1006,236 @@ const GrammarModule = {
                 <div class="mindmap-box">
                     <div class="mindmap-title"><i class="fa-solid fa-diagram-project"></i> 错题拆解思维导图</div>
                     <div class="mindmap-tree">
-                        <div class="mm-node mm-root">定位先行词<br><b>${mm.antecedent || '名词/代词'}</b></div>
+                        <div class="mm-node mm-root">定位先行词<br><b>${gEscapeHtml(mm.antecedent || '名词/代词')}</b></div>
                         <div class="mm-arrow">&rarr;</div>
                         <div class="mm-branch">
-                            <div class="mm-node"><b>从句成分</b><br>${mm.role || '-'}</div>
-                            <div class="mm-node"><b>结构 / 限定</b><br>${mm.placement || '-'}</div>
-                            <div class="mm-node mm-trap"><b>易错避坑</b><br>${mm.trap || m.diagnosis}</div>
+                            <div class="mm-node"><b>从句成分</b><br>${gEscapeHtml(mm.role || '-')}</div>
+                            <div class="mm-node"><b>结构 / 限定</b><br>${gEscapeHtml(mm.placement || '-')}</div>
+                            <div class="mm-node mm-trap"><b>易错避坑</b><br>${gEscapeHtml(mm.trap || m.diagnosis)}</div>
                         </div>
                     </div>
                 </div>
             `;
 
             card.querySelector('.btn-watch-mistake-video').onclick = () => {
-                this.openMistakeVideo(m, idx + 1);
+                this.openMistakeVideo(m, idx + 1, 'video');
+            };
+            card.querySelector('.btn-view-mistake-kp').onclick = () => {
+                this.openMistakeVideo(m, idx + 1, 'kp');
             };
             mistakeList.appendChild(card);
         });
     },
 
-    openMistakeVideo(mistake, num) {
+    findTopicForQuestion(q) {
+        if (!q || !window.GRAMMAR_TOPICS) return null;
+        for (const t of window.GRAMMAR_TOPICS) {
+            if ((t.questions || []).some(item => item.id === q.id)) {
+                return t;
+            }
+        }
+        const prefix = String(q.id || '').split('_')[0];
+        if (prefix) {
+            return window.GRAMMAR_TOPICS.find(t => t.id.startsWith(prefix)) || null;
+        }
+        return null;
+    },
+
+    closeMistakeModal() {
+        GrammarVideoPlayer.stop();
+        const modal = document.getElementById('mistakeVideoModal');
+        if (modal) modal.style.display = 'none';
+        this.currentMistakeState = null;
+    },
+
+    openMistakeVideo(mistake, num, initialTab = 'video') {
         const modal = document.getElementById('mistakeVideoModal');
         const mount = document.getElementById('gMistakeVideoMount');
         const stage = document.getElementById('gVideoPlayerShell');
-        if (modal && mount && stage) {
-            mount.appendChild(stage);
-            modal.style.display = 'flex';
-            const scenes = buildMistakeVideoScenes(mistake);
-            GrammarVideoPlayer.load(scenes, `错题 #${num} 视频精讲`, null, mistake.question?.id || null);
+        const titleEl = document.getElementById('gMistakeModalTitle');
+        if (!modal || !mount || !stage) return;
+
+        const topic = this.findTopicForQuestion(mistake.question);
+        this.currentMistakeState = {
+            mistake,
+            num,
+            topic,
+            videoLoaded: false,
+            playingTopicVideo: false
+        };
+
+        mount.appendChild(stage);
+        if (titleEl) {
+            const srcTag = mistake.question?.sourceTag || 'Packet 4';
+            titleEl.textContent = `错题 #${num} · ${srcTag}`;
+        }
+
+        this.renderMistakeKnowledgePoint(mistake, num, topic);
+        modal.style.display = 'flex';
+        this.switchMistakeModalTab(initialTab);
+    },
+
+    switchMistakeModalTab(tabName) {
+        const state = this.currentMistakeState;
+        if (!state) return;
+
+        const videoMount = document.getElementById('gMistakeVideoMount');
+        const kpPanel = document.getElementById('gMistakeKpPanel');
+        const btnVideo = document.getElementById('btnMistakeTabVideo');
+        const btnKp = document.getElementById('btnMistakeTabKp');
+
+        const isKp = tabName === 'kp';
+        if (btnVideo) btnVideo.classList.toggle('active', !isKp);
+        if (btnKp) btnKp.classList.toggle('active', isKp);
+
+        if (isKp) {
+            GrammarVideoPlayer.pauseMedia();
+            if (videoMount) videoMount.style.display = 'none';
+            if (kpPanel) kpPanel.style.display = 'block';
+        } else {
+            if (kpPanel) kpPanel.style.display = 'none';
+            if (videoMount) videoMount.style.display = 'block';
+            if (!state.videoLoaded || state.playingTopicVideo) {
+                state.videoLoaded = true;
+                state.playingTopicVideo = false;
+                const scenes = buildMistakeVideoScenes(state.mistake);
+                const srcTag = state.mistake.question?.sourceTag || '';
+                const label = srcTag ? `错题 #${state.num} 视频精讲 · ${srcTag}` : `错题 #${state.num} 视频精讲`;
+                GrammarVideoPlayer.load(scenes, label, null, state.mistake.question?.id || null);
+            }
+        }
+    },
+
+    playTopicQuickReminderInModal(topic) {
+        const state = this.currentMistakeState;
+        if (!state || !topic) return;
+        const videoMount = document.getElementById('gMistakeVideoMount');
+        const kpPanel = document.getElementById('gMistakeKpPanel');
+        const btnVideo = document.getElementById('btnMistakeTabVideo');
+        const btnKp = document.getElementById('btnMistakeTabKp');
+
+        state.playingTopicVideo = true;
+        state.videoLoaded = true;
+        if (btnVideo) btnVideo.classList.add('active');
+        if (btnKp) btnKp.classList.remove('active');
+        if (kpPanel) kpPanel.style.display = 'none';
+        if (videoMount) videoMount.style.display = 'block';
+
+        GrammarVideoPlayer.load(
+            topic.videoScenes || [],
+            `KP ${topic.number} 完整微课 · ${topic.title}`,
+            null,
+            topic.id
+        );
+    },
+
+    renderMistakeKnowledgePoint(mistake, num, topic) {
+        const kpPanel = document.getElementById('gMistakeKpPanel');
+        if (!kpPanel) return;
+
+        const q = mistake.question || {};
+        const mm = q.mindMap || {};
+        const origText = q.type === 'multi'
+            ? (q.sentence || '')
+            : (q.sentences || []).join('  +  ');
+        const correctDisplay = q.type === 'multi'
+            ? (q.correctAnswers || []).join(' / ')
+            : (q.sampleAnswer || '');
+        const ruleText = mm.trap || q.hint || (topic ? topic.subtitle : '牢记先行词与从句成分的对应规则');
+
+        const kpHeaderLabel = topic
+            ? `KP ${topic.number} · ${topic.title}`
+            : 'Packet 4 · 定语从句核心知识点';
+
+        const sceneTakeaways = (topic && Array.isArray(topic.videoScenes))
+            ? topic.videoScenes.map((sc, i) => `
+                <div class="g-kp-rule-item">
+                    <div class="g-kp-rule-head">
+                        <span class="g-kp-step-num">0${i + 1}</span>
+                        <strong>${gEscapeHtml(sc.title || sc.badge || '')}</strong>
+                    </div>
+                    <p class="g-kp-rule-tip">${gEscapeHtml(sc.cnTip || '')}</p>
+                    ${sc.resultSentence ? `<div class="g-kp-rule-example">${gEscapeHtml(sc.resultSentence)}</div>` : ''}
+                    ${sc.rulePill ? `<span class="g-kp-rule-badge">${gEscapeHtml(sc.rulePill)}</span>` : ''}
+                </div>
+            `).join('')
+            : '';
+
+        kpPanel.innerHTML = `
+            <div class="g-kp-board">
+                <div class="g-kp-board-top">
+                    <div class="g-kp-board-brand">
+                        <span class="g-kp-brand-pill">EC Grammar · Packet 4</span>
+                        <span class="g-kp-source-label">语法知识点 · ${gEscapeHtml(q.sourceTag || `错题 #${num}`)}</span>
+                    </div>
+                    <div class="g-kp-dots" aria-hidden="true">
+                        <span class="active"></span><span class="active"></span><span class="active"></span><span></span><span></span>
+                    </div>
+                </div>
+                <div class="g-kp-cyan-bar"></div>
+
+                <div class="g-kp-board-body">
+                    <h4 class="g-kp-board-heading">${gEscapeHtml(kpHeaderLabel)}</h4>
+                    <div class="g-kp-board-sub">Structure Breakdown (本题结构公式与先行词定位)</div>
+
+                    <div class="g-kp-chip-row">
+                        <div class="g-kp-chip-col">
+                            <span class="g-kp-chip-cap">原题语境 (Source)</span>
+                            <div class="g-kp-chip g-kp-chip-neutral">${gEscapeHtml(origText)}</div>
+                        </div>
+                        <div class="g-kp-chip-col">
+                            <span class="g-kp-chip-cap is-blue">Antecedent (先行词)</span>
+                            <div class="g-kp-chip g-kp-chip-blue">${gEscapeHtml(mm.antecedent || '被修饰名词 / 代词')}</div>
+                        </div>
+                        <div class="g-kp-chip-col">
+                            <span class="g-kp-chip-cap is-green">Clause Role (从句成分与关系词)</span>
+                            <div class="g-kp-chip g-kp-chip-green">${gEscapeHtml(mm.role || '判断主/宾/定/状')}</div>
+                        </div>
+                    </div>
+
+                    <div class="g-kp-answer-card">
+                        <div class="g-kp-answer-text">
+                            <span class="g-kp-answer-label">合并完成 · 满分句式 / 正确选项</span>
+                            <div class="g-kp-answer-sentence">${gEscapeHtml(correctDisplay)}</div>
+                            ${mm.placement ? `<div class="g-kp-answer-placement">${gEscapeHtml(mm.placement)}</div>` : ''}
+                        </div>
+                        <div class="g-kp-check-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></div>
+                    </div>
+
+                    <div class="g-kp-amber-rule">
+                        <strong>RULE:</strong> ${gEscapeHtml(ruleText)}
+                    </div>
+                </div>
+            </div>
+
+            <div class="g-kp-notes-panel">
+                <div class="g-kp-notes-head">
+                    <div>
+                        <h5><i class="fa-solid fa-graduation-cap"></i> 本考点完整语法规则清单</h5>
+                        ${topic && topic.summary ? `<p class="g-kp-en-summary">${gEscapeHtml(topic.summary)}</p>` : ''}
+                    </div>
+                </div>
+                ${sceneTakeaways ? `<div class="g-kp-rules-grid">${sceneTakeaways}</div>` : ''}
+                <div class="g-kp-footer-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnKpBackToMistakeVideo">
+                        <i class="fa-solid fa-clapperboard"></i> 返回本题精讲视频
+                    </button>
+                    ${topic ? `
+                        <button type="button" class="btn btn-primary btn-sm" id="btnKpWatchQuickReminder">
+                            <i class="fa-solid fa-play"></i> 观看 KP ${gEscapeHtml(topic.number)} 完整微课视频
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        const btnBack = kpPanel.querySelector('#btnKpBackToMistakeVideo');
+        if (btnBack) {
+            btnBack.onclick = () => this.switchMistakeModalTab('video');
+        }
+        const btnWatchKp = kpPanel.querySelector('#btnKpWatchQuickReminder');
+        if (btnWatchKp && topic) {
+            btnWatchKp.onclick = () => this.playTopicQuickReminderInModal(topic);
         }
     }
 };

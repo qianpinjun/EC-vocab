@@ -130,6 +130,62 @@ async function hashPassword(username, password) {
     return `fnv1a:${(h >>> 0).toString(16)}`;
 }
 
+const EDGE_TOKEN_KEY = 'ec_edge_jwt_v1';
+
+function getEdgeUrl() {
+    const cfg = window.EC_CLOUD_CONFIG || {};
+    const url = (cfg.EDGE_FUNCTION_URL || '').trim().replace(/\/+$/, '');
+    return url || null;
+}
+
+function getEdgeToken() {
+    try {
+        return sessionStorage.getItem(EDGE_TOKEN_KEY) || localStorage.getItem(EDGE_TOKEN_KEY) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function setEdgeToken(token) {
+    try {
+        if (token) {
+            sessionStorage.setItem(EDGE_TOKEN_KEY, token);
+            localStorage.setItem(EDGE_TOKEN_KEY, token);
+        } else {
+            sessionStorage.removeItem(EDGE_TOKEN_KEY);
+            localStorage.removeItem(EDGE_TOKEN_KEY);
+        }
+    } catch (e) {}
+}
+
+async function edgeFetch(path, options = {}) {
+    const base = getEdgeUrl();
+    if (!base) throw new Error('Edge Function 未配置');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+    };
+    const token = getEdgeToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${base}${path}`, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        if (res.status === 401) setEdgeToken(null);
+        throw new Error(data.error || `服务端请求失败 (${res.status})`);
+    }
+    return data;
+}
+
+function maskEmailClient(email) {
+    const raw = String(email || '').trim();
+    if (!raw || !raw.includes('@')) return '';
+    const [local, domain] = raw.split('@');
+    if (!local) return `***@${domain}`;
+    const masked = local.length <= 2 ? `${local[0]}***` : `${local[0]}***${local[local.length - 1]}`;
+    return `${masked}@${domain}`;
+}
+
 function getCloudConfig() {
     const cfg = window.EC_CLOUD_CONFIG || {};
     const url = (cfg.SUPABASE_URL || '').trim().replace(/\/+$/, '');
@@ -220,6 +276,19 @@ async function saveUserStore(store) {
     if (!accounts[key]) return;
     accounts[key].data = store;
     saveLocalAccounts(accounts);
+
+    if (getEdgeUrl() && getEdgeToken()) {
+        try {
+            await edgeFetch('/sync/store', {
+                method: 'POST',
+                body: JSON.stringify({ data: store })
+            });
+        } catch (e) {
+            console.error('Edge sync failed:', e);
+            showToast('本地已保存，但云端同步失败: ' + e.message, 'warning');
+        }
+        return;
+    }
 
     if (getCloudConfig()) {
         try {
@@ -549,7 +618,6 @@ function generateAbsurdStory(errorWords, themeId = null) {
 
 // ----------------- Client-Side API -----------------
 const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD_SHA256 = '768225fadf33c3388e839585c03e9e55b3e85b944506a7dde36ff1b5ad71f5e3';
 const ADMIN_TEMPLATE_KEY = 'ec_admin_template_v2';
 
 function loadAdminTemplate() {
@@ -608,34 +676,44 @@ function requireAdminSession() {
 const API = {
     auth: {
         async status() {
+            if (getEdgeUrl()) {
+                if (!getEdgeToken()) {
+                    setSessionUsername(null);
+                    return { success: true, logged_in: false, user: null };
+                }
+                const res = await edgeFetch('/auth/status', { method: 'GET' });
+                if (!res.logged_in || !res.user) {
+                    setEdgeToken(null);
+                    setSessionUsername(null);
+                    return { success: true, logged_in: false, user: null };
+                }
+                const uname = res.user.username;
+                const key = uname.toLowerCase();
+                setSessionUsername(uname);
+                if (!res.user.is_admin) {
+                    const accounts = loadLocalAccounts();
+                    accounts[key] = {
+                        username: uname,
+                        data: res.data || cloneSeedData()
+                    };
+                    saveLocalAccounts(accounts);
+                }
+                return { success: true, logged_in: true, user: { username: uname, is_admin: Boolean(res.user.is_admin) } };
+            }
+
             const uname = getSessionUsername();
             if (!uname) return { success: true, logged_in: false, user: null };
 
             const key = uname.toLowerCase();
-            const accounts = loadLocalAccounts();
-
             if (key === ADMIN_USERNAME) {
-                const needResetAdmin = !accounts[key] || !accounts[key].data || !accounts[key].data.stats || !accounts[key].data.stats.seed_scrubbed_v1;
-                if (needResetAdmin) {
-                    accounts[key] = {
-                        username: ADMIN_USERNAME,
-                        email: 'admin@school.admin',
-                        password_hash: ADMIN_PASSWORD_SHA256,
-                        is_admin: true,
-                        data: loadAdminTemplate()
-                    };
-                    saveLocalAccounts(accounts);
-                }
-                return {
-                    success: true,
-                    logged_in: true,
-                    user: { username: ADMIN_USERNAME, email: 'admin@school.admin', is_admin: true }
-                };
+                setSessionUsername(null);
+                return { success: true, logged_in: false, user: null };
             }
 
+            const accounts = loadLocalAccounts();
             if (getCloudConfig()) {
                 try {
-                    const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,email,password_hash,data`);
+                    const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,data`);
                     if (rows && rows.length > 0) {
                         const row = rows[0];
                         if (row.data && row.data.disabled) {
@@ -644,12 +722,10 @@ const API = {
                         }
                         accounts[key] = {
                             username: row.display_name || row.username,
-                            email: row.email || '',
-                            password_hash: row.password_hash,
                             data: row.data || cloneSeedData()
                         };
                         saveLocalAccounts(accounts);
-                        return { success: true, logged_in: true, user: { username: row.display_name || row.username, email: row.email || '', is_admin: false } };
+                        return { success: true, logged_in: true, user: { username: row.display_name || row.username, is_admin: false } };
                     }
                 } catch (e) {
                     console.warn('Cloud status refresh failed, using local cache:', e);
@@ -664,7 +740,7 @@ const API = {
                 return {
                     success: true,
                     logged_in: true,
-                    user: { username: accounts[key].username, email: accounts[key].email || '', is_admin: false }
+                    user: { username: accounts[key].username, is_admin: false }
                 };
             }
             setSessionUsername(null);
@@ -674,34 +750,42 @@ const API = {
             const uname = (username || '').trim();
             if (!uname || !password) throw new Error('请输入用户名和密码');
             const key = uname.toLowerCase();
-            const pwHash = await hashPassword(key, password);
-            const accounts = loadLocalAccounts();
 
-            // Dedicated Admin Login via normal login screen
-            if (key === ADMIN_USERNAME) {
-                if (pwHash !== ADMIN_PASSWORD_SHA256) {
-                    throw new Error('管理员密码错误');
+            // Zero-Trust Edge Function Mode (Server-Side Auth & Admin)
+            if (getEdgeUrl()) {
+                const res = await edgeFetch('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ username: uname, password })
+                });
+                if (res.token) setEdgeToken(res.token);
+                const disp = res.user?.username || uname;
+                setSessionUsername(disp);
+                if (!res.user?.is_admin) {
+                    const accounts = loadLocalAccounts();
+                    accounts[disp.toLowerCase()] = {
+                        username: disp,
+                        data: res.data || cloneSeedData()
+                    };
+                    saveLocalAccounts(accounts);
                 }
-                const hasCleanAdmin = accounts[key] && accounts[key].data && accounts[key].data.stats && accounts[key].data.stats.seed_scrubbed_v1;
-                accounts[key] = {
-                    username: ADMIN_USERNAME,
-                    email: 'admin@school.admin',
-                    password_hash: ADMIN_PASSWORD_SHA256,
-                    is_admin: true,
-                    data: hasCleanAdmin ? accounts[key].data : loadAdminTemplate()
-                };
-                saveLocalAccounts(accounts);
-                setSessionUsername(ADMIN_USERNAME);
                 return {
                     success: true,
                     logged_in: true,
-                    user: { username: ADMIN_USERNAME, email: 'admin@school.admin', is_admin: true },
-                    message: '欢迎回来，admin（管理员）！'
+                    user: { username: disp, is_admin: Boolean(res.user?.is_admin) },
+                    message: res.message || `欢迎回来，${disp}！`
                 };
             }
 
+            // Static public GitHub Pages without Edge Function: refuse client-side admin secrets
+            if (key === ADMIN_USERNAME) {
+                throw new Error('为保护公开仓库安全，纯前端静态页已禁用客户端管理员校验；请部署 supabase/functions/ec-api 并在 cloud_config.js 配置 EDGE_FUNCTION_URL，或使用学校 Python 服务器版登录管理后台。');
+            }
+
+            const pwHash = await hashPassword(key, password);
+            const accounts = loadLocalAccounts();
+
             if (getCloudConfig()) {
-                const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,email,password_hash,data`);
+                const rows = await supabaseFetch(`ec_users?username=eq.${encodeURIComponent(key)}&select=username,display_name,password_hash,data`);
                 if (!rows || rows.length === 0 || rows[0].password_hash !== pwHash) {
                     throw new Error('用户名或密码错误');
                 }
@@ -711,13 +795,11 @@ const API = {
                 }
                 accounts[key] = {
                     username: row.display_name || row.username,
-                    email: row.email || '',
-                    password_hash: row.password_hash,
                     data: row.data || cloneSeedData()
                 };
                 saveLocalAccounts(accounts);
                 setSessionUsername(row.username);
-                return { success: true, logged_in: true, user: { username: row.display_name || row.username, email: row.email || '', is_admin: false }, message: `欢迎回来，${row.display_name || row.username}！` };
+                return { success: true, logged_in: true, user: { username: row.display_name || row.username, is_admin: false }, message: `欢迎回来，${row.display_name || row.username}！` };
             }
 
             const acc = accounts[key];
@@ -728,7 +810,7 @@ const API = {
                 throw new Error('该账号已被管理员停用，请联系老师恢复');
             }
             setSessionUsername(acc.username);
-            return { success: true, logged_in: true, user: { username: acc.username, email: acc.email || '', is_admin: false }, message: `欢迎回来，${acc.username}！` };
+            return { success: true, logged_in: true, user: { username: acc.username, is_admin: false }, message: `欢迎回来，${acc.username}！` };
         },
         async register(username, password, email = '') {
             const uname = (username || '').trim();
@@ -737,8 +819,27 @@ const API = {
 
             const key = uname.toLowerCase();
             if (key === ADMIN_USERNAME) throw new Error('admin 为系统保留管理员账号，不可重复注册');
-            const pwHash = await hashPassword(key, password);
             const seedData = loadAdminTemplate();
+
+            if (getEdgeUrl()) {
+                const res = await edgeFetch('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ username: uname, password, email: (email || '').trim(), seed_data: seedData })
+                });
+                if (res.token) setEdgeToken(res.token);
+                const accounts = loadLocalAccounts();
+                accounts[key] = { username: uname, data: seedData };
+                saveLocalAccounts(accounts);
+                setSessionUsername(uname);
+                return {
+                    success: true,
+                    logged_in: true,
+                    user: { username: uname, is_admin: false },
+                    message: res.message || '注册成功，已自动为您导入基础词库！'
+                };
+            }
+
+            const pwHash = await hashPassword(key, password);
             const accounts = loadLocalAccounts();
 
             if (getCloudConfig()) {
@@ -764,7 +865,6 @@ const API = {
 
             accounts[key] = {
                 username: uname,
-                email: (email || '').trim(),
                 password_hash: pwHash,
                 data: seedData
             };
@@ -773,11 +873,12 @@ const API = {
             return {
                 success: true,
                 logged_in: true,
-                user: { username: uname, email: (email || '').trim() },
+                user: { username: uname, is_admin: false },
                 message: '注册成功，已自动为您导入基础词库！'
             };
         },
         async logout() {
+            setEdgeToken(null);
             setSessionUsername(null);
             return { success: true, logged_in: false, message: '已退出登录' };
         }
@@ -1051,6 +1152,9 @@ const API = {
     leaderboard: {
         async get(sortBy = 'total') {
             const sortKey = ['total', 'vocab', 'grammar'].includes(sortBy) ? sortBy : 'total';
+            if (getEdgeUrl() && getEdgeToken()) {
+                return await edgeFetch(`/leaderboard?sort=${encodeURIComponent(sortKey)}`, { method: 'GET' });
+            }
             const me = (getSessionUsername() || '').toLowerCase();
             let rawUsers = [];
 
@@ -1240,6 +1344,18 @@ const API = {
         },
         async overview() {
             requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                const res = await edgeFetch('/admin/overview', { method: 'GET' });
+                const tpl = loadAdminTemplate();
+                return {
+                    ...res,
+                    summary: {
+                        ...(res.summary || {}),
+                        template_list_count: tpl.lists.length,
+                        template_word_count: tpl.words.length
+                    }
+                };
+            }
             const map = await this._fetchAllCloudUsers();
             const accounts = [];
             let totalVocab = 0;
@@ -1270,7 +1386,7 @@ const API = {
                 accounts.push({
                     id: k,
                     username: u.display_name || u.username || k,
-                    email: u.email || '',
+                    email: maskEmailClient(u.email || ''),
                     is_admin: isAdm,
                     is_disabled: Boolean(d.disabled),
                     last_active_at: st.last_active_at || u.updated_at || '',
@@ -1301,6 +1417,12 @@ const API = {
         },
         async resetPassword(userId, newPassword) {
             requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                return await edgeFetch('/admin/user_action', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'reset_password', target_username: userId, new_password: newPassword })
+                });
+            }
             const np = String(newPassword || '').trim();
             if (np.length < 4) throw new Error('新密码至少需要 4 个字符');
             const k = String(userId).toLowerCase();
@@ -1314,6 +1436,12 @@ const API = {
         },
         async toggleStatus(userId) {
             requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                return await edgeFetch('/admin/user_action', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'toggle_status', target_username: userId })
+                });
+            }
             const k = String(userId).toLowerCase();
             if (k === ADMIN_USERNAME) throw new Error('不能停用管理员账号');
             const map = await this._fetchAllCloudUsers();
@@ -1326,6 +1454,12 @@ const API = {
         },
         async resetStats(userId) {
             requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                return await edgeFetch('/admin/user_action', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'reset_stats', target_username: userId })
+                });
+            }
             const k = String(userId).toLowerCase();
             const map = await this._fetchAllCloudUsers();
             const row = map.get(k);
@@ -1340,6 +1474,12 @@ const API = {
         },
         async deleteUser(userId) {
             requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                return await edgeFetch('/admin/user_action', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'delete_user', target_username: userId })
+                });
+            }
             const k = String(userId).toLowerCase();
             if (k === ADMIN_USERNAME) throw new Error('不能删除管理员账号');
             const locals = loadLocalAccounts();

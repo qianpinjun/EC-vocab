@@ -1,3 +1,4 @@
+import os
 import re
 import random
 from datetime import timedelta
@@ -8,11 +9,19 @@ try:
     from flask_cors import CORS
 except ImportError:
     CORS = None
-from config import SECRET_KEY, PORT, HOST, DEBUG
+from config import SECRET_KEY, PORT, HOST, DEBUG, DATA_DIR, ADMIN_USERNAME, ADMIN_PASSWORD_FROM_ENV
 from database import init_db
 from models import UserModel, VocabListModel, WordModel, StatsModel, AdminModel
 from question_engine import generate_quiz_round, DEFAULT_DISTRACTORS
 from story_engine import generate_absurd_story
+from security import (
+    rate_limiter,
+    get_client_ip,
+    verify_csrf_request,
+    apply_security_headers,
+    validate_binary_upload,
+    minimize_user_payload,
+)
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -20,13 +29,42 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true',
     PERMANENT_SESSION_LIFETIME=timedelta(days=14),
+    MAX_CONTENT_LENGTH=4 * 1024 * 1024,  # 4 MB hard payload limit
 )
-if CORS:
-    CORS(app, supports_credentials=True)
+
+# Restrict CORS strictly to explicitly configured origins (same-origin by default)
+allowed_origins = [o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()]
+if CORS and allowed_origins:
+    CORS(app, origins=allowed_origins, supports_credentials=True)
 
 # Initialize database tables on startup
 init_db()
+
+
+@app.before_request
+def _enforce_csrf_guard():
+    if request.path.startswith('/api/'):
+        ok, err_msg = verify_csrf_request(request)
+        if not ok:
+            return jsonify({'success': False, 'error': err_msg}), 403
+
+
+@app.after_request
+def _attach_security_headers(response):
+    return apply_security_headers(response, request)
+
+
+@app.errorhandler(413)
+def _handle_payload_too_large(_err):
+    return jsonify({'success': False, 'error': '上传或请求体过大（上限 4 MB）'}), 413
+
+
+@app.errorhandler(500)
+def _handle_internal_error(_err):
+    # Never leak stack traces or SQL errors in production responses
+    return jsonify({'success': False, 'error': '服务器内部错误，请稍后重试'}), 500
 
 
 def login_required(f):
@@ -65,25 +103,36 @@ def api_auth_status():
     user = UserModel.get_by_id(user_id) if user_id else None
     if not user:
         session.pop('user_id', None)
+        session.pop('username', None)
+        session.pop('is_admin', None)
         return jsonify({'success': True, 'logged_in': False, 'user': None})
-    return jsonify({'success': True, 'logged_in': True, 'user': user})
+    return jsonify({'success': True, 'logged_in': True, 'user': minimize_user_payload(user)})
 
 
 @app.route('/api/auth/register', methods=['POST'])
 def api_auth_register():
-    data = request.get_json() or {}
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
-    email = data.get('email', '').strip()
+    ip = get_client_ip(request)
+    allowed, retry_after = rate_limiter.check(f'register:{ip}', limit=10, window_seconds=900)
+    if not allowed:
+        resp = jsonify({'success': False, 'error': f'注册请求过于频繁，请在 {retry_after} 秒后再试'})
+        resp.headers['Retry-After'] = str(retry_after)
+        return resp, 429
+
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    password = str(data.get('password', ''))
+    email = str(data.get('email', '')).strip()
     try:
         user = UserModel.register(username, password, email)
+        session.clear()
         session.permanent = True
         session['user_id'] = user['id']
         session['username'] = user['username']
+        session['is_admin'] = False
         return jsonify({
             'success': True,
             'logged_in': True,
-            'user': user,
+            'user': minimize_user_payload(user),
             'message': '注册成功，已自动为您导入基础词库！'
         })
     except ValueError as e:
@@ -92,15 +141,33 @@ def api_auth_register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def api_auth_login():
-    data = request.get_json() or {}
-    username = data.get('username', '').strip()
-    password = data.get('password', '')
+    ip = get_client_ip(request)
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username', '')).strip()
+    password = str(data.get('password', ''))
+
+    ip_ok, ip_retry = rate_limiter.check(f'login_ip:{ip}', limit=20, window_seconds=300)
+    if not ip_ok:
+        resp = jsonify({'success': False, 'error': f'登录尝试过多，请在 {ip_retry} 秒后重试'})
+        resp.headers['Retry-After'] = str(ip_retry)
+        return resp, 429
+
+    user_key = f'login_u:{ip}:{username.lower()}'
+    u_ok, u_retry = rate_limiter.check(user_key, limit=8, window_seconds=300)
+    if not u_ok:
+        resp = jsonify({'success': False, 'error': f'该账号短时间尝试次数过多，请在 {u_retry} 秒后重试'})
+        resp.headers['Retry-After'] = str(u_retry)
+        return resp, 429
+
     try:
         user = UserModel.authenticate(username, password)
     except PermissionError as e:
         return jsonify({'success': False, 'error': str(e)}), 403
     if not user:
         return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
+
+    rate_limiter.reset(user_key)
+    session.clear()
     session.permanent = True
     session['user_id'] = user['id']
     session['username'] = user['username']
@@ -108,16 +175,14 @@ def api_auth_login():
     return jsonify({
         'success': True,
         'logged_in': True,
-        'user': user,
+        'user': minimize_user_payload(user),
         'message': f"欢迎回来，{user['username']}（管理员）！" if user.get('is_admin') else f"欢迎回来，{user['username']}！"
     })
 
 
 @app.route('/api/auth/logout', methods=['POST'])
 def api_auth_logout():
-    session.pop('user_id', None)
-    session.pop('username', None)
-    session.pop('is_admin', None)
+    session.clear()
     return jsonify({'success': True, 'logged_in': False, 'message': '已退出登录'})
 
 
@@ -592,10 +657,43 @@ def api_admin_delete_bank_word(list_id, word_id):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 
+@app.route('/api/admin/wordbanks/<int:list_id>/import_file', methods=['POST'])
+@admin_required
+def api_admin_import_bank_file(list_id):
+    """Secure file upload import with extension, size, NUL-byte & binary magic-byte validation."""
+    scope = request.form.get('scope', 'template')
+    sync_all = str(request.form.get('sync_all', 'false')).lower() in ('1', 'true', 'yes', 'on')
+    upload = request.files.get('file')
+    if not upload:
+        return jsonify({'success': False, 'error': '请选择要上传的 .txt 或 .csv 词库文件'}), 400
+
+    raw_bytes = upload.read(2 * 1024 * 1024 + 1)
+    ok, validated, status_code, err_msg = validate_binary_upload(
+        upload.filename or '',
+        raw_bytes,
+        allowed_kinds=('text',),
+        max_bytes=2 * 1024 * 1024,
+    )
+    if not ok:
+        return jsonify({'success': False, 'error': err_msg}), status_code
+
+    words_items = _parse_batch_text(validated['text'])
+    if not words_items:
+        return jsonify({'success': False, 'error': '文件中未解析到有效词汇（每行格式：单词 | 中文释义）'}), 400
+    try:
+        res = AdminModel.add_words_to_bank(scope, list_id, words_items, sync_all=sync_all)
+        msg = f"安全校验通过，已从 {validated['filename']} 导入 {res['added']} 个词汇"
+        if res['pushed_students'] > 0:
+            msg += f"，并同步下发给 {res['pushed_students']} 位学生"
+        return jsonify({'success': True, **res, 'message': msg})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
 @app.route('/api/admin/wordbanks/<int:list_id>/broadcast', methods=['POST'])
 @admin_required
 def api_admin_broadcast_bank(list_id):
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     scope = data.get('scope', 'template')
     try:
         pushed = AdminModel.broadcast_existing_bank(scope, list_id)
@@ -606,4 +704,7 @@ def api_admin_broadcast_bank(list_id):
 
 if __name__ == '__main__':
     print(f"Server running on http://{HOST}:{PORT}")
+    if not ADMIN_PASSWORD_FROM_ENV:
+        pw_file = os.path.join(DATA_DIR, '.admin_password')
+        print(f"[Security] Admin account '{ADMIN_USERNAME}' bootstrap password stored privately in: {pw_file}")
     app.run(host=HOST, port=PORT, debug=DEBUG)

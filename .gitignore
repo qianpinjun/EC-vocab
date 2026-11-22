@@ -3,4 +3,9 @@
 ec_project.zip
 ec_server_release.zip
 data/.secret_key
+data/.admin_password
+data/*.db-wal
+data/*.db-shm
+.env
+.env.local
 venv/

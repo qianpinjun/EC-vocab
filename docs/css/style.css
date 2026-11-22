@@ -96,16 +96,22 @@ body {
     border-radius: var(--radius-sm);
 }
 
+.brand-text {
+    flex-shrink: 0;
+}
+
 .brand-text h1 {
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.2;
+    white-space: nowrap;
 }
 
 .brand-sub {
     font-size: 0.75rem;
     color: var(--text-muted);
+    white-space: nowrap;
 }
 
 /* Segmented Navigation */
@@ -2794,4 +2800,488 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
 
 .btn-stop-speech:hover {
     background: #fae2e2 !important;
+}
+
+/* ==========================================================================
+   GRAMMAR RESULTS 4-METRIC ROW, CINEMA PLAYER & KNOWLEDGE POINT VISUAL BOARD
+   ========================================================================== */
+
+.metric-row.metric-row-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+    .metric-row.metric-row-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.g-video-media-wrap {
+    position: relative;
+    background: #070b14;
+    width: 100%;
+}
+
+#gRealVideoEl {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 440px;
+    object-fit: contain;
+    background: #070b14;
+    cursor: pointer;
+}
+
+.g-video-loading {
+    position: absolute;
+    inset: 0 0 46px 0;
+    background: rgba(7, 11, 20, 0.86);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: #cbd5e1;
+    font-size: 0.88rem;
+    z-index: 4;
+}
+
+.g-video-spinner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid rgba(59, 130, 246, 0.25);
+    border-top-color: #38bdf8;
+    animation: gSpin 0.8s linear infinite;
+}
+
+@keyframes gSpin {
+    to { transform: rotate(360deg); }
+}
+
+.g-real-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.9rem;
+    background: #0b1120;
+    border-top: 1px solid #1e293b;
+}
+
+.g-real-seek {
+    flex: 1 1 auto;
+    min-width: 80px;
+    height: 5px;
+    accent-color: #38bdf8;
+    cursor: pointer;
+}
+
+.g-real-time {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: #cbd5e1;
+    white-space: nowrap;
+    min-width: 78px;
+    text-align: center;
+}
+
+/* Mistake Card Action Row & Modal Tabs */
+.g-mistake-tags {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.g-kp-mini-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #eef6f1;
+    color: var(--accent-primary);
+    border: 1px solid #cde2d6;
+}
+
+.g-mistake-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.g-mistake-modal-dialog {
+    max-width: 860px !important;
+    width: 95% !important;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 1.25rem 1.45rem !important;
+}
+
+.g-mistake-modal-head {
+    flex-shrink: 0;
+    margin-bottom: 0.9rem !important;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.g-mistake-modal-title-wrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+}
+
+.g-mistake-modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+}
+
+.g-modal-tabs {
+    display: inline-flex;
+    align-items: center;
+    background: #f0ece3;
+    border: 1px solid var(--border-subtle);
+    border-radius: 999px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.g-modal-tab {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.36rem 0.85rem;
+    border-radius: 999px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    white-space: nowrap;
+    transition: all 0.16s ease;
+}
+
+.g-modal-tab:hover {
+    color: var(--text-primary);
+}
+
+.g-modal-tab.active {
+    background: var(--accent-primary);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(27, 67, 50, 0.22);
+}
+
+/* Visual Knowledge Point Board (Inspired by Kinetic Video Board) */
+.g-kp-board {
+    background: radial-gradient(circle at 72% 18%, #162646 0%, #0b1326 60%, #070d1b 100%);
+    border: 1px solid #1e3259;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    color: #f8fafc;
+    box-shadow: 0 12px 28px rgba(7, 13, 27, 0.25);
+}
+
+.g-kp-board-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.g-kp-board-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.g-kp-brand-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    letter-spacing: 0.01em;
+}
+
+.g-kp-source-label {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.g-kp-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.g-kp-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(148, 163, 184, 0.35);
+}
+
+.g-kp-dots span.active {
+    background: #38bdf8;
+}
+
+.g-kp-cyan-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8 0%, #2dd4bf 55%, rgba(56, 189, 248, 0.25) 100%);
+}
+
+.g-kp-board-body {
+    padding: 1.2rem 1.35rem 1.35rem;
+}
+
+.g-kp-board-heading {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.22rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.g-kp-board-sub {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #34d399;
+    margin-bottom: 1rem;
+}
+
+.g-kp-chip-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 720px) {
+    .g-kp-chip-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.g-kp-chip-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.g-kp-chip-cap {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #94a3b8;
+    padding-left: 0.2rem;
+}
+
+.g-kp-chip-cap.is-blue { color: #60a5fa; }
+.g-kp-chip-cap.is-green { color: #34d399; }
+
+.g-kp-chip {
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.45;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+}
+
+.g-kp-chip-neutral {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(148, 163, 184, 0.32);
+    color: #e2e8f0;
+}
+
+.g-kp-chip-blue {
+    background: rgba(37, 99, 235, 0.22);
+    border: 1.5px solid #3b82f6;
+    color: #eff6ff;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15) inset;
+}
+
+.g-kp-chip-green {
+    background: rgba(16, 185, 129, 0.16);
+    border: 1.5px solid #10b981;
+    color: #d1fae5;
+}
+
+.g-kp-answer-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(6, 78, 59, 0.42);
+    border: 1.5px solid rgba(16, 185, 129, 0.65);
+    border-radius: 12px;
+    padding: 0.95rem 1.15rem;
+    margin-bottom: 0.95rem;
+}
+
+.g-kp-answer-label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #34d399;
+    margin-bottom: 0.28rem;
+}
+
+.g-kp-answer-sentence {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.5;
+}
+
+.g-kp-answer-placement {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: #a7f3d0;
+}
+
+.g-kp-check-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.2);
+    border: 1.5px solid #34d399;
+    color: #34d399;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.g-kp-amber-rule {
+    background: rgba(180, 83, 9, 0.28);
+    border: 1.5px solid #f59e0b;
+    border-radius: 10px;
+    padding: 0.72rem 1rem;
+    font-size: 0.88rem;
+    color: #fde68a;
+    line-height: 1.5;
+}
+
+.g-kp-amber-rule strong {
+    color: #fbbf24;
+    margin-right: 0.3rem;
+}
+
+/* Editorial Rule Checklist Below Dark Board */
+.g-kp-notes-panel {
+    margin-top: 1rem;
+    background: #fbf9f4;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.15rem;
+}
+
+.g-kp-notes-head h5 {
+    margin: 0 0 0.35rem 0;
+    font-size: 0.95rem;
+    color: var(--accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.g-kp-en-summary {
+    margin: 0 0 0.85rem 0;
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.g-kp-rules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.g-kp-rule-item {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.g-kp-rule-head {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.84rem;
+    color: var(--text-primary);
+}
+
+.g-kp-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--accent-primary);
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.g-kp-rule-tip {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.48;
+}
+
+.g-kp-rule-example {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.76rem;
+    background: #f5f2eb;
+    color: var(--text-primary);
+    padding: 0.4rem 0.55rem;
+    border-radius: 6px;
+    border-left: 2.5px solid var(--accent-primary);
+}
+
+.g-kp-rule-badge {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 0.16rem 0.5rem;
+}
+
+.g-kp-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--border-subtle);
 }

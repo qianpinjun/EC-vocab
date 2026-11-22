@@ -1,8 +1,9 @@
 import json
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
-from config import BASE_DIR
+from config import BASE_DIR, DATA_DIR
 from database import db_cursor
+from security import mask_email
 
 
 def _load_starter_seed():
@@ -440,11 +441,22 @@ class StatsModel:
 class AdminModel:
     @staticmethod
     def _template_path():
-        return os.path.join(BASE_DIR, 'data', 'starter_vocab.json')
+        return os.path.join(DATA_DIR, 'starter_vocab.json')
 
     @staticmethod
     def load_template():
-        data = _load_starter_seed()
+        t_path = AdminModel._template_path()
+        data = None
+        if os.path.exists(t_path):
+            try:
+                with open(t_path, 'r', encoding='utf-8') as f:
+                    loaded = json.load(f)
+                if isinstance(loaded.get('lists'), list) and isinstance(loaded.get('words'), list):
+                    data = loaded
+            except Exception:
+                data = None
+        if not data:
+            data = _load_starter_seed()
         if not data:
             return {'lists': [], 'words': []}
         return {
@@ -505,7 +517,7 @@ class AdminModel:
             accounts.append({
                 'id': r['id'],
                 'username': r['username'],
-                'email': r['email'],
+                'email': mask_email(r['email']),
                 'is_admin': is_adm,
                 'is_disabled': bool(r['is_disabled']),
                 'created_at': r['created_at'] or '',

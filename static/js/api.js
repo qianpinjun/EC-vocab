@@ -2,11 +2,21 @@
 
 const API_BASE = '/api';
 
+function getCsrfToken() {
+    const match = document.cookie.match(/(?:^|;\s*)ec_csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
 async function fetchJson(endpoint, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
     const defaultHeaders = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     };
+    if (method !== 'GET' && method !== 'HEAD') {
+        const csrf = getCsrfToken();
+        if (csrf) defaultHeaders['X-CSRF-Token'] = csrf;
+    }
 
     options.headers = {
         ...defaultHeaders,
