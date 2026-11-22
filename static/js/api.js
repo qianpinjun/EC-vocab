@@ -28,6 +28,11 @@ async function fetchJson(endpoint, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+        if (response.status === 401 && !endpoint.startsWith('/auth/login') && !endpoint.startsWith('/auth/register')) {
+            if (typeof window.forceSessionLogout === 'function') {
+                window.forceSessionLogout(data.error || '账号登录状态已失效或已被管理员停用');
+            }
+        }
         throw new Error(data.error || `请求失败 (${response.status})`);
     }
 

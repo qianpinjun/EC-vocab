@@ -171,7 +171,14 @@ async function edgeFetch(path, options = {}) {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-        if (res.status === 401) setEdgeToken(null);
+        const isAuthRoute = path.startsWith('/auth/login') || path.startsWith('/auth/register');
+        if (!isAuthRoute && (res.status === 401 || (res.status === 403 && String(data.error || '').includes('停用')))) {
+            setEdgeToken(null);
+            setSessionUsername(null);
+            if (typeof window.forceSessionLogout === 'function') {
+                window.forceSessionLogout(data.error || '该账号已被管理员停用，已强制退出登录');
+            }
+        }
         throw new Error(data.error || `服务端请求失败 (${res.status})`);
     }
     return data;
@@ -284,6 +291,7 @@ async function saveUserStore(store) {
                 body: JSON.stringify({ data: store })
             });
         } catch (e) {
+            if (!getEdgeToken()) return; // Session was revoked/disabled and already forced out
             console.error('Edge sync failed:', e);
             showToast('本地已保存，但云端同步失败: ' + e.message, 'warning');
         }

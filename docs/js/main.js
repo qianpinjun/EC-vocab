@@ -12,7 +12,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkAuthAndBoot();
 });
 
+let _sessionWatchTimer = null;
+let _sessionCheckInFlight = false;
+let _isSessionActive = false;
+
+function stopSessionWatchdog() {
+    if (_sessionWatchTimer) {
+        clearInterval(_sessionWatchTimer);
+        _sessionWatchTimer = null;
+    }
+    _isSessionActive = false;
+}
+
+function forceSessionLogout(reason = '该账号已被管理员停用或登录状态已失效，已强制退出登录') {
+    const wasActive = _isSessionActive;
+    stopSessionWatchdog();
+    if (window.QuizModule && QuizModule.autoNextTimer) {
+        clearTimeout(QuizModule.autoNextTimer);
+        QuizModule.autoNextTimer = null;
+    }
+    if (window.GrammarVideoPlayer) GrammarVideoPlayer.stop();
+    if (window.StorySpeech) StorySpeech.stop(true);
+    if (window.VocabModule && typeof VocabModule.reset === 'function') VocabModule.reset();
+
+    // Close any open modals immediately
+    document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
+
+    const startCard = document.getElementById('quizStartCard');
+    const arena = document.getElementById('quizArena');
+    const resultCard = document.getElementById('quizResultCard');
+    if (startCard) startCard.style.display = 'block';
+    if (arena) arena.style.display = 'none';
+    if (resultCard) resultCard.style.display = 'none';
+
+    setAuthenticatedUI(null);
+    if (wasActive && typeof showToast === 'function') {
+        showToast(reason, 'error');
+    }
+}
+
+window.forceSessionLogout = forceSessionLogout;
+
+async function verifyLiveSessionNow() {
+    if (!_isSessionActive || _sessionCheckInFlight) return;
+    _sessionCheckInFlight = true;
+    try {
+        const res = await API.auth.status();
+        if (!res || !res.logged_in || !res.user) {
+            forceSessionLogout('该账号已被管理员停用或登录状态已失效，已强制退出登录');
+        }
+    } catch (e) {
+        // Network hiccup: don't spuriously kick out; 401/403 is already handled inside API client
+    } finally {
+        _sessionCheckInFlight = false;
+    }
+}
+
+function startSessionWatchdog(user) {
+    stopSessionWatchdog();
+    if (!user) return;
+    _isSessionActive = true;
+    // Periodically verify active student sessions (every 8s while tab is visible) so admin disable takes effect immediately
+    if (!user.is_admin) {
+        _sessionWatchTimer = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                verifyLiveSessionNow();
+            }
+        }, 8000);
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && _isSessionActive) {
+        verifyLiveSessionNow();
+    }
+});
+
+window.addEventListener('focus', () => {
+    if (_isSessionActive) {
+        verifyLiveSessionNow();
+    }
+});
+
 function switchMode(mode, subTab = 'vocab') {
+    if (_isSessionActive && mode !== 'admin') {
+        verifyLiveSessionNow();
+    }
     const portal = document.getElementById('modePortal');
     const vocabWs = document.getElementById('vocabWorkspace');
     const grammarWs = document.getElementById('grammarWorkspace');
@@ -101,8 +186,10 @@ function setAuthenticatedUI(user) {
         if (usernameText) usernameText.textContent = isAdmin ? `${user.username} · 管理员` : user.username;
         if (navBtnAdmin) navBtnAdmin.style.display = isAdmin ? 'inline-flex' : 'none';
         if (portalBtnAdmin) portalBtnAdmin.style.display = isAdmin ? 'flex' : 'none';
+        startSessionWatchdog(user);
         switchMode(isAdmin ? 'admin' : 'portal');
     } else {
+        stopSessionWatchdog();
         if (authGate) authGate.style.display = 'block';
         if (mainNav) mainNav.style.display = 'none';
         if (userHeaderBox) userHeaderBox.style.display = 'none';
