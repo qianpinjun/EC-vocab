@@ -205,7 +205,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/functions\/v1\/ec-api/, '').replace(/^\/ec-api/, '') || '/';
+  // Strip /functions/v1/<slug> or /<slug> regardless of deployed function name (ec-api, bright-worker, etc.)
+  const path = url.pathname
+    .replace(/^\/functions\/v1\/[^/]+/, '')
+    .replace(/^\/(?!auth\/|sync\/|leaderboard\b|admin\/)[^/]+/, '') || '/';
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
   try {

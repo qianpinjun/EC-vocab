@@ -24,9 +24,9 @@ DROP POLICY IF EXISTS "Enable update for all users" ON public.ec_users;
 DROP POLICY IF EXISTS "Enable delete for all users" ON public.ec_users;
 
 -- Only service_role (used exclusively inside supabase/functions/ec-api) can access ec_users
+DROP POLICY IF EXISTS "ec_users_service_role_only" ON public.ec_users;
 CREATE POLICY "ec_users_service_role_only"
 ON public.ec_users
-AS RESTRICTIVE
 FOR ALL
 TO public
 USING (auth.role() = 'service_role')
