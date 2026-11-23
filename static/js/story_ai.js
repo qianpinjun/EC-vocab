@@ -910,18 +910,122 @@
         return { htmlEn, matchedKeys };
     }
 
+    function highlightChineseParagraph(cnText, wordsList) {
+        const tokens = [];
+        let working = String(cnText || '');
+        const glosses = [];
+        for (const wItem of (wordsList || [])) {
+            const fullGloss = cleanCnGloss(wItem.meaning);
+            if (!fullGloss) continue;
+            glosses.push(fullGloss);
+            fullGloss.split(/[；;，,、/／]+/).forEach(part => {
+                const p = part.trim();
+                if (p.length >= 2) glosses.push(p);
+            });
+        }
+        const uniqueGlosses = Array.from(new Set(glosses)).sort((a, b) => b.length - a.length);
+        for (const g of uniqueGlosses) {
+            if (!working.includes(g)) continue;
+            const idx = tokens.length;
+            tokens.push(`<span class="story-meaning-pill">${escHtml(g)}</span>`);
+            working = working.split(g).join(`@@CN_TOK_${idx}@@`);
+        }
+        let htmlCn = escHtml(working);
+        tokens.forEach((pill, idx) => {
+            htmlCn = htmlCn.replace(`@@CN_TOK_${idx}@@`, pill);
+        });
+        return htmlCn;
+    }
+
+    function isDegenerateText(text, lang = 'en') {
+        const s = String(text || '').trim();
+        if (!s) return true;
+
+        // Catch prompt-leak / meta-label hallucinations
+        if (/theChineseTranslation|theEnglishTranslation|---\s*CN\s*---|Target vocabulary|System:|Assistant:|English story\s*:|Chinese translation\s*:/i.test(s)) {
+            return true;
+        }
+        // Catch glued repetition loops: TheyTheyThey, HEHEHE, theTheThe, aaaaa
+        if (/(.)\1{4,}/.test(s)) return true;
+        if (/([A-Za-z]{2,12})\1{2,}/i.test(s)) return true;
+        // Catch spaced repetition loops: They They They, the the the
+        if (/\b([A-Za-z]{2,16})(?:\s+\1){2,}\b/i.test(s)) return true;
+        if (/\b(\w+\s+\w+)(?:\s+\1){2,}\b/i.test(s)) return true;
+        // Catch abnormal spaceless Latin blobs (e.g. theChineseTranslationtheChinese...)
+        if (/[A-Za-z]{26,}/.test(s)) return true;
+
+        if (lang === 'en') {
+            if (s.length < 35) return true;
+            const cjkCount = (s.match(/[\u4e00-\u9fff]/g) || []).length;
+            if (cjkCount / s.length > 0.12) return true;
+            const spaceCount = (s.match(/\s/g) || []).length;
+            if (spaceCount / s.length < 0.10) return true;
+            const words = (s.toLowerCase().match(/[a-z]+/g) || []);
+            if (words.length < 7) return true;
+            const uniqRatio = new Set(words).size / words.length;
+            if (words.length >= 14 && uniqRatio < 0.42) return true;
+        } else if (lang === 'cn') {
+            if (s.length < 10) return true;
+            const cjkCount = (s.match(/[\u4e00-\u9fff]/g) || []).length;
+            if (cjkCount / s.length < 0.35) return true;
+            if (/([\u4e00-\u9fff]{2,8})\1{2,}/.test(s)) return true;
+        }
+        return false;
+    }
+
+    function cleanModelOutput(raw) {
+        return String(raw || '')
+            .replace(/\*\*(.*?)\*\*/g, '$1')
+            .replace(/__(.*?)__/g, '$1')
+            .replace(/`([^`]*)`/g, '$1')
+            .replace(/^#+\s*/gm, '')
+            .replace(/^\s*(?:Paragraph\s*\d+|Part\s*\d+|Story|English|Chinese|Translation|中文翻译|英文故事)\s*[:：\-—]*\s*/gim, '')
+            .replace(/^\s*\d+\s*[\.\)、\-—]+\s*(?:CN|EN)?\s*[:：\-—]*\s*/gim, '')
+            .trim();
+    }
+
+    function trimToCleanSentence(text, lang = 'en') {
+        const s = String(text || '').replace(/\s+/g, ' ').trim();
+        if (!s) return '';
+        const endRx = lang === 'cn' ? /[。！？!?]/g : /[.!?]/g;
+        let lastIdx = -1;
+        let m;
+        while ((m = endRx.exec(s)) !== null) {
+            lastIdx = m.index;
+        }
+        if (lastIdx >= Math.floor(s.length * 0.45)) {
+            return s.slice(0, lastIdx + 1).trim();
+        }
+        return s;
+    }
+
+    function extractReplyText(output) {
+        const gen = output && output[0] && output[0].generated_text;
+        if (Array.isArray(gen)) {
+            const lastMsg = gen[gen.length - 1];
+            return (lastMsg && lastMsg.content) ? String(lastMsg.content).trim() : '';
+        }
+        return String(gen || '').trim();
+    }
+
     const StoryStudio = {
         THEMES: STORY_THEMES.map(t => ({ id: t.id, label: t.label, title: t.title })),
         MODEL_ID: 'onnx-community/Qwen2.5-0.5B-Instruct',
         _pipeline: null,
         _backendLabel: '',
+        _device: '',
         _loadingPromise: null,
 
         generateCurated,
 
-        async ensureLocalModel(onProgress) {
-            if (this._pipeline) {
-                return { pipe: this._pipeline, backend: this._backendLabel };
+        async ensureLocalModel(onProgress, forceWasm = false) {
+            if (this._pipeline && (!forceWasm || this._device === 'wasm')) {
+                return { pipe: this._pipeline, backend: this._backendLabel, device: this._device };
+            }
+            if (forceWasm && this._pipeline && this._device !== 'wasm') {
+                this._pipeline = null;
+                this._backendLabel = '';
+                this._device = '';
             }
             if (this._loadingPromise) {
                 return this._loadingPromise;
@@ -941,28 +1045,24 @@
                 env.allowLocalModels = false;
                 env.useBrowserCache = true;
 
-                // Detect best backend (WebGPU f16 -> WebGPU q4 -> WASM CPU q4)
+                // IMPORTANT: Always use dtype='q4' (fp32 activations). Never use 'q4f16' because
+                // fp16 attention saturates on Apple Silicon / WebGPU and causes 'TheyTheyThey' loops!
                 let device = 'wasm';
-                let dtype = 'q4';
+                const dtype = 'q4';
                 let backendLabel = 'WASM CPU (q4)';
-                try {
-                    if (typeof navigator !== 'undefined' && navigator.gpu) {
-                        const adapter = await navigator.gpu.requestAdapter();
-                        if (adapter) {
-                            device = 'webgpu';
-                            if (adapter.features && adapter.features.has('shader-f16')) {
-                                dtype = 'q4f16';
-                                backendLabel = 'WebGPU (q4f16)';
-                            } else {
-                                dtype = 'q4';
+                if (!forceWasm) {
+                    try {
+                        if (typeof navigator !== 'undefined' && navigator.gpu) {
+                            const adapter = await navigator.gpu.requestAdapter();
+                            if (adapter) {
+                                device = 'webgpu';
                                 backendLabel = 'WebGPU (q4)';
                             }
                         }
+                    } catch (e) {
+                        device = 'wasm';
+                        backendLabel = 'WASM CPU (q4)';
                     }
-                } catch (e) {
-                    device = 'wasm';
-                    dtype = 'q4';
-                    backendLabel = 'WASM CPU (q4)';
                 }
 
                 const hosts = ['https://huggingface.co/', 'https://hf-mirror.com/'];
@@ -1001,17 +1101,16 @@
 
                         this._pipeline = pipe;
                         this._backendLabel = backendLabel;
-                        return { pipe, backend: backendLabel };
+                        this._device = device;
+                        return { pipe, backend: backendLabel, device };
                     } catch (err) {
                         lastErr = err;
                         const errStr = String(err || '').toLowerCase();
                         const isNetErr = errStr.includes('fetch') || errStr.includes('network') || errStr.includes('404') || errStr.includes('cors');
-                        // If WebGPU failed during shader/session creation (not network), fall back to WASM on same host
                         if (device === 'webgpu' && !isNetErr) {
                             device = 'wasm';
-                            dtype = 'q4';
                             backendLabel = 'WASM CPU (q4)';
-                            hIdx--; // retry same host with WASM
+                            hIdx--;
                             continue;
                         }
                     }
@@ -1027,121 +1126,183 @@
             }
         },
 
+        async _runQwenStoryPass(pipe, aiTargets, setting) {
+            const wordLines = aiTargets
+                .map((w, i) => `${i + 1}. ${w.word} (${cleanCnGloss(w.meaning)})`)
+                .join('\n');
+
+            // Pass 1: Pure English story ONLY (no bilingual switching -> eliminates token-loop collapse)
+            const enMessages = [
+                {
+                    role: 'system',
+                    content:
+                        'You are an AP English writing teacher. Write a realistic, grammatically correct short story in past tense. ' +
+                        'Output ONLY 2 short English paragraphs (4 to 6 sentences total, 90 to 135 words). ' +
+                        'Do NOT output titles, labels, numbering, markdown, bullet points, or Chinese.'
+                },
+                {
+                    role: 'user',
+                    content:
+                        `Setting: ${setting}.\n` +
+                        `Use these English vocabulary words naturally with accurate grammar:\n${wordLines}\n\n` +
+                        `Write ONLY the 2 English paragraphs now.`
+                }
+            ];
+
+            const enOutput = await pipe(enMessages, {
+                max_new_tokens: 230,
+                do_sample: true,
+                temperature: 0.6,
+                top_p: 0.9,
+                top_k: 40,
+                repetition_penalty: 1.28,
+                no_repeat_ngram_size: 4
+            });
+
+            const rawEn = cleanModelOutput(extractReplyText(enOutput));
+            let enParas = rawEn
+                .split(/\n{2,}|\n/)
+                .map(s => trimToCleanSentence(s, 'en'))
+                .filter(s => !isDegenerateText(s, 'en'));
+
+            // If model returned 1 cohesive multi-sentence block, split cleanly into 2 balanced paragraphs like curated stories
+            if (enParas.length === 1) {
+                const sents = (enParas[0].match(/[^.!?]+[.!?]+/g) || [enParas[0]]).map(s => s.trim()).filter(Boolean);
+                if (sents.length >= 4) {
+                    const mid = Math.ceil(sents.length / 2);
+                    enParas = [sents.slice(0, mid).join(' '), sents.slice(mid).join(' ')];
+                }
+            } else if (enParas.length > 3) {
+                enParas = [enParas.slice(0, 2).join(' '), enParas.slice(2, 4).join(' ')];
+            }
+
+            if (!enParas.length) return null;
+
+            // Check vocabulary coverage on clean English paragraphs
+            const matchedSet = new Set();
+            const highlightedEn = enParas.map(pEn => {
+                const { htmlEn, matchedKeys } = highlightParagraph(pEn, aiTargets);
+                matchedKeys.forEach(k => matchedSet.add(k));
+                return { en: pEn, htmlEn, wordsUsed: Array.from(matchedKeys) };
+            });
+
+            if (matchedSet.size === 0) return null;
+
+            // Pass 2: Clean 1-to-1 Chinese translation for each English paragraph
+            const builtParas = [];
+            for (const item of highlightedEn) {
+                let pCn = '';
+                try {
+                    const cnMessages = [
+                        {
+                            role: 'system',
+                            content: 'You are a professional English-to-Chinese translator. Translate the given English paragraph into natural, accurate Simplified Chinese. Output ONLY the Chinese translation, with no English, no titles, and no notes.'
+                        },
+                        {
+                            role: 'user',
+                            content: item.en
+                        }
+                    ];
+                    const cnOut = await pipe(cnMessages, {
+                        max_new_tokens: 180,
+                        do_sample: true,
+                        temperature: 0.35,
+                        top_p: 0.88,
+                        top_k: 40,
+                        repetition_penalty: 1.25,
+                        no_repeat_ngram_size: 4
+                    });
+                    const candCn = trimToCleanSentence(cleanModelOutput(extractReplyText(cnOut)), 'cn');
+                    if (!isDegenerateText(candCn, 'cn')) {
+                        pCn = candCn;
+                    }
+                } catch (e) {
+                    pCn = '';
+                }
+
+                // If translation pass failed validation, build a clean Chinese vocabulary gloss line (never broken text)
+                if (!pCn) {
+                    const usedObjs = aiTargets.filter(w => item.wordsUsed.includes(w.word.toLowerCase()));
+                    const glossList = usedObjs.map(w => `“${cleanCnGloss(w.meaning)}”`).join('、');
+                    pCn = glossList
+                        ? `本段语境串联核心释义：${glossList}（可对照上方高亮英文词汇精读理解）。`
+                        : '本段承接上文主题语境，请结合上下文理解故事脉络。';
+                }
+
+                builtParas.push({
+                    en: item.en,
+                    cn: pCn,
+                    html_en: item.htmlEn,
+                    html_cn: highlightChineseParagraph(pCn, aiTargets),
+                    words_used: item.wordsUsed
+                });
+            }
+
+            return { paragraphs: builtParas, matchedSet };
+        },
+
         async generateWithLocalAI(errorWords, themeId = null, onProgress = null) {
             const uniqueWords = dedupeWords(errorWords);
             if (!uniqueWords.length) return null;
 
             const theme = getTheme(themeId);
-            const { pipe, backend } = await this.ensureLocalModel(onProgress);
+            let { pipe, backend, device } = await this.ensureLocalModel(onProgress, false);
 
-            // Cap words sent to tiny 0.5B prompt to 8 for highest coherence; any overflow seamlessly appended via curated beats
-            const aiTargets = uniqueWords.slice(0, 8);
-            const wordLines = aiTargets
-                .map((w, i) => `${i + 1}. "${w.word}" (${cleanCnGloss(w.meaning)})`)
-                .join('\n');
-
+            // Cap words sent to tiny 0.5B prompt to 6 for crisp coherence; overflow formatted into 2-word curated paragraphs
+            const aiTargets = uniqueWords.slice(0, 6);
             const setting = THEME_PROMPTS[theme.id] || THEME_PROMPTS.journalism;
 
             if (onProgress) {
-                onProgress({ stage: 'generate', pct: 100, text: `🧠 Qwen2.5-0.5B (${backend}) 正在创作语法地道的主题故事...` });
+                onProgress({ stage: 'generate', pct: 98, text: `🧠 Qwen2.5-0.5B (${backend}) 正在创作英文故事与中文对照...` });
             }
 
-            const messages = [
-                {
-                    role: 'system',
-                    content:
-                        'You are an experienced AP English writing teacher. ' +
-                        'Write ONE cohesive, realistic, grammatically spotless short story in consistent past tense ' +
-                        '(2 short paragraphs, 110-150 words total) set in a single continuous scene. ' +
-                        'Strict grammar rules: use every target word with its exact natural English part of speech and collocation, ' +
-                        'keep verb tenses consistent (past tense throughout), avoid dangling modifiers, and keep the tone classroom-ready (zero absurd sci-fi jokes). ' +
-                        'After the English story, output a line containing ONLY "---CN---" followed by a fluent, accurate Chinese translation.'
-                },
-                {
-                    role: 'user',
-                    content:
-                        `Single continuous scene: ${setting}.\n` +
-                        `Target vocabulary words (use EVERY word naturally with correct grammar):\n${wordLines}\n\n` +
-                        `Write the 2-paragraph past-tense English story, then "---CN---", then the Chinese translation.`
+            let aiResult = await this._runQwenStoryPass(pipe, aiTargets, setting);
+
+            // If WebGPU produced degenerate text (e.g. driver precision issue), auto-retry once on rock-solid WASM CPU (q4)
+            if (!aiResult && device === 'webgpu') {
+                if (onProgress) {
+                    onProgress({ stage: 'generate', pct: 99, text: '检测到 WebGPU 精度异常，正在自动切换 WASM CPU (q4) 重新生成...' });
                 }
-            ];
-
-            const output = await pipe(messages, {
-                max_new_tokens: 420,
-                do_sample: true,
-                temperature: 0.4,
-                top_p: 0.88,
-                repetition_penalty: 1.1
-            });
-
-            let rawReply = '';
-            const gen = output && output[0] && output[0].generated_text;
-            if (Array.isArray(gen)) {
-                const lastMsg = gen[gen.length - 1];
-                rawReply = (lastMsg && lastMsg.content) ? String(lastMsg.content) : '';
-            } else {
-                rawReply = String(gen || '');
-            }
-            rawReply = rawReply.trim();
-
-            // Split English and Chinese sections
-            let enBlock = rawReply;
-            let cnBlock = '';
-            const splitMatch = rawReply.split(/---\s*CN\s*---|【中文翻译】|中文翻译[:：]/i);
-            if (splitMatch.length >= 2) {
-                enBlock = splitMatch[0].trim();
-                cnBlock = splitMatch.slice(1).join('\n').trim();
+                const fallbackRuntime = await this.ensureLocalModel(onProgress, true);
+                pipe = fallbackRuntime.pipe;
+                backend = fallbackRuntime.backend;
+                device = fallbackRuntime.device;
+                aiResult = await this._runQwenStoryPass(pipe, aiTargets, setting);
             }
 
-            // Clean any markdown headers or bold markers the LLM added
-            const cleanText = (txt) => txt
-                .replace(/\*\*(.*?)\*\*/g, '$1')
-                .replace(/__(.*?)__/g, '$1')
-                .replace(/^#+\s*/gm, '')
-                .trim();
-
-            const enParas = cleanText(enBlock)
-                .split(/\n{2,}|\n/)
-                .map(s => s.trim())
-                .filter(s => s.length > 20 && /[A-Za-z]{3,}/.test(s));
-
-            const cnParas = cleanText(cnBlock)
-                .split(/\n{2,}|\n/)
-                .map(s => s.trim())
-                .filter(s => s.length > 4);
-
-            // If model output was unexpectedly empty or malformed, fall back gracefully
-            if (!enParas.length) {
+            // Hard quality gate: never render broken/degenerate AI text; seamlessly fall back to curated engine
+            if (!aiResult || aiResult.matchedSet.size === 0) {
                 const fb = generateCurated(uniqueWords, theme.id);
-                fb.engine_label = '本地模型输出异常，已自动切回语法精校引擎';
+                fb.engine_label = '本地模型本次触发防重复保护，已自动切换至语法精校故事';
                 return fb;
             }
 
-            const allMatched = new Set();
-            const paragraphs = enParas.map((pEn, idx) => {
-                const { htmlEn, matchedKeys } = highlightParagraph(pEn, uniqueWords);
-                matchedKeys.forEach(k => allMatched.add(k));
-                const pCn = cnParas[idx] || (idx === enParas.length - 1 && cnParas.length === 1 ? cnParas[0] : '');
-                return {
-                    en: pEn,
-                    cn: pCn,
-                    html_en: htmlEn,
-                    html_cn: pCn ? escHtml(pCn) : '<span class="text-muted">（点击上方高亮英文词汇可查看详细释义）</span>',
-                    words_used: Array.from(matchedKeys)
-                };
-            });
-
-            // Guarantee 100% vocabulary coverage: append verified curated beats for any words the 0.5B model skipped
-            const missedByAi = uniqueWords.filter(w => !allMatched.has(w.word.toLowerCase()));
+            // Format IDENTICALLY to normal curated stories:
+            //   1) AI-generated cohesive story paragraphs (each with highlighted EN + matching highlighted CN)
+            //   2) Any remaining words chunked neatly into 2-word curated paragraphs (exact same rhythm as generateCurated)
+            //   3) Clean theme closing paragraph
+            const paragraphs = aiResult.paragraphs.slice();
+            const missedByAi = uniqueWords.filter(w => !aiResult.matchedSet.has(w.word.toLowerCase()));
             const aiCoveredCount = uniqueWords.length - missedByAi.length;
+
             if (missedByAi.length > 0) {
                 const patchBeats = missedByAi.map((wItem, idx) => buildCuratedBeat(wItem, idx + 1, true));
+                for (let i = 0; i < patchBeats.length; i += 2) {
+                    const chunk = patchBeats.slice(i, i + 2);
+                    paragraphs.push({
+                        en: chunk.map(b => b.en).join(' '),
+                        cn: chunk.map(b => b.cn).join(''),
+                        html_en: chunk.map(b => b.html_en).join(' '),
+                        html_cn: chunk.map(b => b.html_cn).join(''),
+                        words_used: chunk.map(b => b.word)
+                    });
+                }
                 paragraphs.push({
-                    en: patchBeats.map(b => b.en).join(' '),
-                    cn: patchBeats.map(b => b.cn).join(''),
-                    html_en: patchBeats.map(b => b.html_en).join(' '),
-                    html_cn: patchBeats.map(b => b.html_cn).join(''),
-                    words_used: patchBeats.map(b => b.word)
+                    en: theme.ending_en,
+                    cn: theme.ending_cn,
+                    html_en: escHtml(theme.ending_en),
+                    html_cn: escHtml(theme.ending_cn),
+                    words_used: []
                 });
             }
 
@@ -1150,8 +1311,8 @@
                 theme_id: theme.id,
                 themes: STORY_THEMES.map(t => ({ id: t.id, label: t.label, title: t.title })),
                 engine: 'local_ai',
-                engine_label: `🧠 Qwen2.5-0.5B 本地 AI (${backend}) · 自主覆盖 ${aiCoveredCount}/${uniqueWords.length} 词` +
-                    (missedByAi.length ? `（其余 ${missedByAi.length} 词已用精校句自动补全）` : ' · 100% 原创覆盖'),
+                engine_label: `Qwen2.5-0.5B 本地 AI (${backend}) · 原创覆盖 ${aiCoveredCount}/${uniqueWords.length} 词` +
+                    (missedByAi.length ? `（其余 ${missedByAi.length} 词已按标准段落补全）` : ' · 100% 原创覆盖'),
                 paragraphs,
                 words: uniqueWords
             };

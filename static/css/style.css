@@ -3285,3 +3285,12 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     padding-top: 0.65rem;
     border-top: 1px solid var(--border-subtle);
 }
+
+/* Hard word-wrap safety so story cards can never overflow horizontally */
+.story-body,
+.story-para,
+.story-en-line,
+.story-cn-line {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
