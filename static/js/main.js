@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.GrammarModule) GrammarModule.init();
     if (window.LeaderboardModule) LeaderboardModule.init();
     if (window.AdminModule) AdminModule.init();
+    if (window.OnboardingModule) OnboardingModule.init();
     initAuth();
     await checkAuthAndBoot();
 });
@@ -33,6 +34,7 @@ function forceSessionLogout(reason = '该账号已被管理员停用或登录状
     }
     if (window.GrammarVideoPlayer) GrammarVideoPlayer.stop();
     if (window.StorySpeech) StorySpeech.stop(true);
+    if (window.OnboardingModule) OnboardingModule.finish(false);
     if (window.VocabModule && typeof VocabModule.reset === 'function') VocabModule.reset();
 
     // Close any open modals immediately
@@ -186,10 +188,13 @@ function setAuthenticatedUI(user) {
         if (usernameText) usernameText.textContent = isAdmin ? `${user.username} · 管理员` : user.username;
         if (navBtnAdmin) navBtnAdmin.style.display = isAdmin ? 'inline-flex' : 'none';
         if (portalBtnAdmin) portalBtnAdmin.style.display = isAdmin ? 'flex' : 'none';
+        const btnGuide = document.getElementById('btnOpenGuide');
+        if (btnGuide) btnGuide.style.display = isAdmin ? 'none' : 'inline-flex';
         startSessionWatchdog(user);
         switchMode(isAdmin ? 'admin' : 'portal');
     } else {
         stopSessionWatchdog();
+        if (window.OnboardingModule) OnboardingModule.finish(false);
         if (authGate) authGate.style.display = 'block';
         if (mainNav) mainNav.style.display = 'none';
         if (userHeaderBox) userHeaderBox.style.display = 'none';
@@ -206,6 +211,7 @@ async function checkAuthAndBoot() {
         if (res.logged_in && res.user) {
             setAuthenticatedUI(res.user);
             await VocabModule.loadLists();
+            if (window.OnboardingModule) OnboardingModule.maybeStartForUser(res.user, false);
             return;
         }
     } catch (e) {}
@@ -245,6 +251,7 @@ function initAuth() {
                 setAuthenticatedUI(res.user);
                 await VocabModule.loadLists();
                 showToast(res.message || '登录成功', 'success');
+                if (window.OnboardingModule) OnboardingModule.maybeStartForUser(res.user, false);
             } catch (err) {
                 showToast(err.message, 'error');
             }
@@ -263,6 +270,7 @@ function initAuth() {
                 setAuthenticatedUI(res.user);
                 await VocabModule.loadLists();
                 showToast(res.message || '注册成功', 'success');
+                if (window.OnboardingModule) OnboardingModule.maybeStartForUser(res.user, true);
             } catch (err) {
                 showToast(err.message, 'error');
             }

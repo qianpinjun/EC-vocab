@@ -3294,3 +3294,284 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+
+/* ==========================================================================
+   NEW-ACCOUNT INTERACTIVE ONBOARDING GUIDE (EDITORIAL ACADEMIC WALKTHROUGH)
+   ========================================================================== */
+
+.btn-header-guide {
+    white-space: nowrap;
+    gap: 0.35rem;
+    padding: 0.38rem 0.72rem !important;
+    font-size: 0.82rem !important;
+}
+
+@media (max-width: 1060px) {
+    .header-inner {
+        flex-wrap: wrap;
+        height: auto !important;
+        padding: 0.6rem 1rem !important;
+        gap: 0.55rem 0.85rem;
+    }
+    .nav-segment {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .segment-btn {
+        padding: 0.38rem 0.78rem;
+        font-size: 0.84rem;
+    }
+}
+
+.segment-btn.nav-tour-highlight {
+    position: relative;
+    z-index: 1100;
+    background: #eef7f2 !important;
+    color: var(--accent-primary) !important;
+    box-shadow: 0 0 0 2px var(--accent-primary), 0 0 0 5px rgba(27, 67, 50, 0.22);
+    border-radius: var(--radius-sm);
+}
+
+.ob-modal-dialog {
+    max-width: 720px !important;
+    width: 94% !important;
+    max-height: 88vh;
+    padding: 0 !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fbf9f4 !important;
+    border: 1px solid #dfd8ca !important;
+    box-shadow: 0 24px 60px rgba(20, 28, 22, 0.26) !important;
+}
+
+.ob-progress-track {
+    height: 4px;
+    width: 100%;
+    background: #e9e3d7;
+    flex-shrink: 0;
+}
+
+.ob-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary) 0%, #2d6a4f 100%);
+    transition: width 0.28s ease;
+}
+
+.ob-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.4rem 0.85rem;
+    border-bottom: 1px solid var(--border-subtle);
+    background: #ffffff;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.ob-head-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.ob-kicker {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #9a6b24;
+    text-transform: uppercase;
+}
+
+.ob-step-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.16rem 0.6rem;
+    border-radius: 999px;
+    background: #eef6f1;
+    border: 1px solid #cce2d5;
+    color: var(--accent-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.ob-head-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.ob-counter {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.ob-modal-body {
+    padding: 1.35rem 1.5rem 1.2rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+.ob-hero-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.15rem;
+}
+
+.ob-hero-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--accent-primary);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    box-shadow: 0 6px 16px rgba(27, 67, 50, 0.22);
+}
+
+.ob-hero-text h3 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.24rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.ob-hero-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.ob-features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+    .ob-features-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ob-feature-card {
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0.85rem 0.95rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ob-feature-card:hover {
+    border-color: #c7d9ce;
+    box-shadow: 0 4px 12px rgba(27, 67, 50, 0.06);
+}
+
+.ob-feature-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f2f7f4;
+    color: var(--accent-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ob-feature-body strong {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.22rem;
+}
+
+.ob-feature-body p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.ob-tip-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.7rem 0.95rem;
+    border-radius: var(--radius-sm);
+    background: #fdf8ec;
+    border: 1px solid #ebdcb8;
+    color: #7c5618;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.ob-tip-banner i {
+    margin-top: 2px;
+    color: #b47c22;
+    flex-shrink: 0;
+}
+
+.ob-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.4rem;
+    border-top: 1px solid var(--border-subtle);
+    background: #ffffff;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.ob-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ob-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    border: none;
+    padding: 0;
+    background: #d8d1c4;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ob-dot.done {
+    background: #84b39a;
+}
+
+.ob-dot.active {
+    width: 24px;
+    background: var(--accent-primary);
+}
+
+.ob-nav-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}

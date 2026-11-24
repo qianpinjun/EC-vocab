@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="./css/style.css?v=20261123a">
+    <link rel="stylesheet" href="./css/style.css?v=20261124a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -33,6 +33,9 @@
                 </nav>
 
                 <div id="userHeaderBox" style="display: none; align-items: center; gap: 10px;">
+                    <button type="button" class="btn btn-secondary btn-sm btn-header-guide" id="btnOpenGuide" title="查看网站功能使用指南">
+                        <i class="fa-regular fa-circle-question"></i> 指南
+                    </button>
                     <span class="count-pill"><strong id="currentUsernameText"></strong></span>
                     <button class="btn btn-secondary btn-sm" id="btnLogout">退出</button>
                 </div>
@@ -1003,6 +1006,51 @@ dialogue 对话，对白"></textarea>
             </div>
         </div>
 
+        <!-- New-Account Interactive Onboarding Guide Modal (Shown Once Automatically, Replayable Anytime) -->
+        <div class="modal-overlay" id="onboardingModal" style="display: none;">
+            <div class="modal-dialog ob-modal-dialog">
+                <div class="ob-progress-track">
+                    <div class="ob-progress-fill" id="obProgressFill" style="width: 20%;"></div>
+                </div>
+                <div class="ob-modal-head">
+                    <div class="ob-head-meta">
+                        <span class="ob-kicker" id="obKicker">STEP 01 · STUDY PORTAL</span>
+                        <span class="ob-step-pill" id="obStepBadge">学习总览</span>
+                    </div>
+                    <div class="ob-head-right">
+                        <span class="ob-counter" id="obStepCounter">01 / 05</span>
+                        <button type="button" class="btn-close" id="btnCloseOnboarding" aria-label="关闭导览">&times;</button>
+                    </div>
+                </div>
+                <div class="ob-modal-body">
+                    <div class="ob-hero-row">
+                        <div class="ob-hero-icon" id="obHeroIcon"><i class="fa-solid fa-compass"></i></div>
+                        <div class="ob-hero-text">
+                            <h3 id="obTitle">欢迎来到 EC Language Lab</h3>
+                            <p id="obSubtitle"></p>
+                        </div>
+                    </div>
+                    <div class="ob-features-grid" id="obHighlightsGrid"></div>
+                    <div class="ob-tip-banner">
+                        <i class="fa-regular fa-lightbulb"></i>
+                        <span id="obTipText"></span>
+                    </div>
+                </div>
+                <div class="ob-modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btnOnboardingSkip">跳过导览</button>
+                    <div class="ob-dots" id="obStepDots"></div>
+                    <div class="ob-nav-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnOnboardingPrev">
+                            <i class="fa-solid fa-arrow-left"></i> 上一步
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnOnboardingNext">
+                            下一步 <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Global Toast Notifications -->
         <div class="toast-stack" id="toastContainer"></div>
     </div>
@@ -1019,6 +1067,7 @@ dialogue 对话，对白"></textarea>
     <script src="./js/grammar.js?v=20261122a"></script>
     <script src="./js/leaderboard.js?v=20261121d"></script>
     <script src="./js/admin.js?v=20261121d"></script>
-    <script src="./js/main.js?v=20261122c"></script>
+    <script src="./js/onboarding.js?v=20261124a"></script>
+    <script src="./js/main.js?v=20261124a"></script>
 </body>
 </html>
