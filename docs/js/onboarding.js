@@ -1,171 +1,114 @@
-// New-Account Interactive Onboarding Guide (Shown Once per New Student Account, Replayable Anytime)
+// New-Account Interactive Spotlight Focus-Mode Guide
+// Highlights real live buttons and workspaces one by one (Shown once per new student account, replayable anytime)
 
 const OnboardingModule = {
     STORAGE_PREFIX: 'ec_onboarding_seen_v1:',
     currentStep: 0,
     activeUserKey: null,
     isOpen: false,
+    _repositionRaf: null,
+    _repositionTimer: null,
+    _boundUpdate: null,
 
     STEPS: [
         {
-            kicker: 'STEP 01 · STUDY PORTAL',
-            badge: '学习总览',
-            title: '欢迎来到 EC Language Lab 校园英语研习台',
-            subtitle: '这是你的专属学习起点：系统已自动为你导入 9 个 EC 核心词汇单元（共 270 词）与 Packet 4 定语从句全套真题微课。',
-            navSelector: '#mainNav .segment-btn[data-mode="portal"]',
-            icon: 'fa-compass',
-            highlights: [
-                {
-                    icon: 'fa-chart-line',
-                    title: '个人学习账本',
-                    desc: '首页顶部实时统计你的已刷词汇题、已掌握词量、已刷语法题与全校排名。'
-                },
-                {
-                    icon: 'fa-cloud-arrow-up',
-                    title: '云端跨设备同步',
-                    desc: '每次练习与自建词库都会自动保存，在电脑或平板登录同一账号即可接续进度。'
-                },
-                {
-                    icon: 'fa-shield-halved',
-                    title: '真实独立账号空间',
-                    desc: '个人错题、掌握度与词库相互隔离，所有数据均为真实学习记录。'
-                },
-                {
-                    icon: 'fa-bolt',
-                    title: '三大研习模块一键直达',
-                    desc: '随时通过顶部导航栏在「词汇库」「词汇训练」「语法 Packet 4」「全校排行」间无缝切换。'
-                }
-            ],
-            tip: '小提示：本引导仅在新账号首次进入时自动弹出一次，之后随时可点击右上角「指南」按钮重新查看。'
+            mode: 'portal',
+            subTab: 'vocab',
+            selector: '#modePortal .study-ledger-bar',
+            badge: '学习账本',
+            title: '实时查看你的学习数据与排名',
+            desc: '这 4 格会实时记录你刷过的词汇题、已掌握词量、语法题和全校当前排名。',
+            actions: [
+                '刷题进度自动云端同步，换设备登录也不会丢失',
+                '直接点击最右侧「全校当前排名」可快速跳转排行榜'
+            ]
         },
         {
-            kicker: 'STEP 02 · VOCABULARY BANK & STORY STUDIO',
-            badge: '词汇库与故事工坊',
-            title: '词库管理、自建单元与语境写实短篇',
-            subtitle: '在「词汇库」中浏览或编辑你的所有单元词表，把枯燥的孤立单词一键串成可读、可听的真实英文短篇。',
-            navSelector: '#mainNav .segment-btn[data-mode="vocab"][data-tab="vocab"]',
-            icon: 'fa-book-open',
-            highlights: [
-                {
-                    icon: 'fa-folder-plus',
-                    title: '新建单元 & 批量录入',
-                    desc: '支持手动单条录入或按「单词 - 释义」批量导入课堂生词，随时扩展个人词库。'
-                },
-                {
-                    icon: 'fa-feather-pointed',
-                    title: '5 大写实主题短篇工坊',
-                    desc: '点击「生成语境故事」即可按校园新闻、辩论案例、北港档案等 5 种风格生成中英对照短篇。'
-                },
-                {
-                    icon: 'fa-microchip',
-                    title: '浏览器本地 AI 创作',
-                    desc: '支持调用本地 Qwen2.5 小模型按你选定的词汇原创短篇，并自动高亮中英文词义。'
-                },
-                {
-                    icon: 'fa-volume-high',
-                    title: '英文朗读（可暂停 / 停止）',
-                    desc: '每篇故事均支持逐句英文朗读，可随时点击暂停、继续或停止，磨耳朵练语感。'
-                }
-            ],
-            tip: '推荐用法：考前先在词库里挑出不熟的单元，点击「生成语境故事」边听边读 2 分钟，再进入训练！'
+            mode: 'vocab',
+            subTab: 'vocab',
+            selector: '#tabVocab .toolbar-card',
+            badge: '词汇库',
+            title: '切换 9 个内置单元或管理词库',
+            desc: '新账号已自动预装 Packet 1–3 与逻辑谬误共 270 个核心词，下拉这里即可切换单元。',
+            actions: [
+                '点击上方「新建单元」可创建自己的课堂或考前词表',
+                '点击右上角「开始本单元训练」可直接进入本单元测验'
+            ]
         },
         {
-            kicker: 'STEP 03 · ADAPTIVE VOCABULARY TRAINING',
-            badge: '语境词汇训练',
-            title: '4 题防重复情境刷题 + 1 错罚 2 强化闭环',
-            subtitle: '告别死记硬背：每个词汇配有 4 道互不重复的真实英文语境填空题，错词会自动触发定制故事与加罚复测。',
-            navSelector: '#mainNav .segment-btn[data-mode="vocab"][data-tab="quiz"]',
-            icon: 'fa-pen-nib',
-            highlights: [
-                {
-                    icon: 'fa-shuffle',
-                    title: '每词 4 套不同情境题',
-                    desc: '系统自动轮换 4 套独立语境例句，同一轮与连续多轮刷题都不会遇到重复原题。'
-                },
-                {
-                    icon: 'fa-eye-slash',
-                    title: '屏蔽答案式中文提示',
-                    desc: '卡壳时可展开中文语境提示，目标词释义已自动遮盖，帮你真正靠语境推理。'
-                },
-                {
-                    icon: 'fa-wand-magic-sparkles',
-                    title: '首轮错词专属短篇复盘',
-                    desc: '第 1 轮出现错词后，自动将本轮全部错词编成一篇连贯中英短篇，加深记忆。'
-                },
-                {
-                    icon: 'fa-rotate-right',
-                    title: '1 错罚 2 通关机制',
-                    desc: '每错 1 词，下一轮自动带入该错词并额外随机抽取 2 个干扰巩固词，直到 100% 全对通关！'
-                }
-            ],
-            tip: '掌握规则：同一单词累计答对 2 次即自动点亮「已掌握」状态，并计入你的全校排行榜积分。'
+            mode: 'vocab',
+            subTab: 'vocab',
+            selector: '#btnOpenStoryStudio',
+            badge: '故事工坊',
+            title: '把单元词汇一键串成写实英文短篇',
+            desc: '背孤立单词容易忘？点这个「词汇故事工坊」按钮，把当前单元生词编成连贯中英对照短篇。',
+            actions: [
+                '内置 5 种校园/辩论/档案写实主题，也支持浏览器本地 Qwen AI 原创',
+                '自带英文朗读功能，支持随时暂停、继续或停止'
+            ]
         },
         {
-            kicker: 'STEP 04 · GRAMMAR PACKET 4 STUDIO',
-            badge: '语法精讲与错题诊断',
-            title: '24fps 微课视频 + 错题思维导图 + 一键语法知识点',
-            subtitle: '完整覆盖 Unit 14 定语从句 6 大核心考点（KP 01 – KP 06）与 8 题综合挑战，每道错题都有专属精讲。',
-            navSelector: '#mainNav .segment-btn[data-mode="grammar"]',
-            icon: 'fa-clapperboard',
-            highlights: [
-                {
-                    icon: 'fa-film',
-                    title: 'Quick Reminder 精讲微课',
-                    desc: '做题前先看 20–30 秒 AI 语音动效微课，快速回顾先行词、关系代词与逗号法则。'
-                },
-                {
-                    icon: 'fa-list-check',
-                    title: '双题型精准批改',
-                    desc: '同时支持 B8 多项对比选择与 Page 10 / B6 合并写句，智能诊断双主语、多逗号、漏删代词等典型错误。'
-                },
-                {
-                    icon: 'fa-book-bookmark',
-                    title: '每道错题配「语法知识点」卡片',
-                    desc: '结算页和视频弹窗内均可一键切换「语法知识点」，直观拆解先行词、从句成分、满分句式与核心 RULE。'
-                },
-                {
-                    icon: 'fa-diagram-project',
-                    title: '错题精讲视频 + 错题重做',
-                    desc: '每道错题都配有独立精讲视频与思维导图，看完后点「做错题」直接重刷薄弱项。'
-                }
-            ],
-            tip: '小技巧：看错题精讲视频时，进度条与倍速按钮位于视频下方，完全不会遮挡画面底部的 RULE 规则条！'
+            mode: 'vocab',
+            subTab: 'vocab',
+            selector: '#tabVocab .input-grid',
+            badge: '录入生词',
+            title: '单条或批量导入你自己的生词',
+            desc: '课上遇到老师补充的新词，可以直接在这里扩充到当前单元中参与刷题。',
+            actions: [
+                '左侧可逐个录入单词、释义、音标与例句',
+                '右侧支持按「单词 - 释义」一行一词批量导入'
+            ]
         },
         {
-            kicker: 'STEP 05 · SCHOOL HONOR ROLL',
-            badge: '全校实时排行榜',
-            title: '公开透明的全校刷题榜与学习成长记录',
-            subtitle: '与全校同学一起打卡比拼：榜单兼顾勤奋度、掌握词量与正确率，每一道认真完成的题目都会实时计分。',
-            navSelector: '#mainNav .segment-btn[data-mode="ranking"]',
-            icon: 'fa-trophy',
-            highlights: [
-                {
-                    icon: 'fa-ranking-star',
-                    title: '三维度榜单自由切换',
-                    desc: '支持「综合总榜」「词汇刷题榜」「语法刷题榜」，清晰查看自己与前三名的差距。'
-                },
-                {
-                    icon: 'fa-scale-balanced',
-                    title: '公平透明的积分公式',
-                    desc: '每刷 1 道词汇题 +2（答对 +1）、掌握 1 词 +4、每刷 1 道语法题 +3（答对 +2），杜绝纯瞎蒙刷分。'
-                },
-                {
-                    icon: 'fa-user-check',
-                    title: '实时定位「我的当前排名」',
-                    desc: '顶部专属横幅随时展示你的总积分、综合正确率与最近活跃状态。'
-                },
-                {
-                    icon: 'fa-graduation-cap',
-                    title: '准备就绪，开始研习！',
-                    desc: '点击下方按钮即可立刻进入学习台，开启你的第一轮词汇或语法训练。'
-                }
-            ],
-            tip: '你已经了解网站的全部核心功能！随时可点击顶部「指南」按钮再次打开本导览。'
+            mode: 'vocab',
+            subTab: 'quiz',
+            selector: '#quizStartCard',
+            badge: '词汇训练',
+            title: '四维防重复语境刷题 + 1错罚2 闭环',
+            desc: '选好单元后点「开始第 1 轮语境训练」，每个词配有 4 套不同英文语境题，拒绝死记硬背。',
+            actions: [
+                '第 1 轮若有错词，会自动生成错词专属故事帮你复盘',
+                '每错 1 词下轮额外带入 2 个巩固词，直到 100% 全对通关'
+            ]
+        },
+        {
+            mode: 'grammar',
+            subTab: 'vocab',
+            selector: '#grammarTopicsGrid .grammar-topic-card:first-child',
+            badge: '语法 Packet 4',
+            title: '微课视频 + 错题精讲 + 语法知识点',
+            desc: 'Unit 14 定语从句共 6 大考点和 1 个综合挑战，卡片上可先看微课再刷题，或直接做题。',
+            actions: [
+                '每道错题都会生成思维导图与 24fps AI 语音精讲视频',
+                '在错题页和视频弹窗内，可一键切到「语法知识点」查看结构公式与 RULE'
+            ]
+        },
+        {
+            mode: 'ranking',
+            subTab: 'vocab',
+            selector: '#lbSortBar',
+            badge: '全校排行',
+            title: '三个维度实时查看全校刷题榜',
+            desc: '点这里可以在「综合总榜」「词汇刷题榜」「语法刷题榜」之间自由切换。',
+            actions: [
+                '积分兼顾刷题量、已掌握词数与正确率，公平反映学习投入',
+                '上方横幅会始终显示你自己的实时排名与正确率'
+            ]
+        },
+        {
+            mode: 'portal',
+            subTab: 'vocab',
+            selector: '#btnOpenGuide',
+            badge: '随时重看',
+            title: '导览完成！随时点这里重新开启',
+            desc: '新账号的自动聚焦导览只会弹出这一次；以后任何时候想回顾某个功能的位置，点右上角「指南」即可。',
+            actions: [
+                '现在点击「开始学习」即可立刻开始你的第一轮练习！'
+            ]
         }
     ],
 
     init() {
-        const modal = document.getElementById('onboardingModal');
         const btnPrev = document.getElementById('btnOnboardingPrev');
         const btnNext = document.getElementById('btnOnboardingNext');
         const btnSkip = document.getElementById('btnOnboardingSkip');
@@ -186,29 +129,32 @@ const OnboardingModule = {
                     this.currentStep++;
                     this.renderStep();
                 } else {
-                    this.finish(true);
+                    this.finish(true, true);
                 }
             });
         }
         if (btnSkip) {
-            btnSkip.addEventListener('click', () => this.finish(true));
+            btnSkip.addEventListener('click', () => this.finish(true, true));
         }
         if (btnClose) {
-            btnClose.addEventListener('click', () => this.finish(true));
-        }
-        if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) this.finish(true);
-            });
+            btnClose.addEventListener('click', () => this.finish(true, false));
         }
         if (btnOpenGuide) {
             btnOpenGuide.addEventListener('click', () => this.open(0, false));
         }
 
+        this._boundUpdate = () => {
+            if (!this.isOpen) return;
+            if (this._repositionRaf) cancelAnimationFrame(this._repositionRaf);
+            this._repositionRaf = requestAnimationFrame(() => this.positionSpotlight());
+        };
+        window.addEventListener('resize', this._boundUpdate);
+        window.addEventListener('scroll', this._boundUpdate, true);
+
         document.addEventListener('keydown', (e) => {
             if (!this.isOpen) return;
             if (e.key === 'Escape') {
-                this.finish(true);
+                this.finish(true, false);
             } else if (e.key === 'ArrowRight') {
                 if (this.currentStep < this.STEPS.length - 1) {
                     this.currentStep++;
@@ -247,13 +193,11 @@ const OnboardingModule = {
         if (!user || user.is_admin || !user.username) return;
         this.activeUserKey = user.username;
         if (isBrandNewRegistration) {
-            // Guaranteed one-time guide for every brand-new registered account
             if (!this.hasSeen(user.username)) {
-                setTimeout(() => this.open(0, true), 220);
+                setTimeout(() => this.open(0, true), 260);
             }
             return;
         }
-        // On first login of a new student account (0 activity so far & never shown before), show once
         if (this.hasSeen(user.username)) return;
         if (window.API && API.stats && typeof API.stats.me === 'function') {
             API.stats.me().then(res => {
@@ -262,7 +206,6 @@ const OnboardingModule = {
                 if (totalDone === 0 && !this.hasSeen(user.username)) {
                     this.open(0, true);
                 } else {
-                    // Existing returning account with prior study history: don't interrupt them
                     this.markSeen(user.username);
                 }
             }).catch(() => {});
@@ -270,28 +213,31 @@ const OnboardingModule = {
     },
 
     open(startStep = 0, markWhenDone = true) {
-        const modal = document.getElementById('onboardingModal');
-        if (!modal) return;
+        const layer = document.getElementById('onboardingTourLayer');
+        if (!layer) return;
         this.currentStep = Math.max(0, Math.min(startStep, this.STEPS.length - 1));
         this._markWhenDone = markWhenDone;
         this.isOpen = true;
-        modal.style.display = 'flex';
+        layer.style.display = 'block';
+        document.body.classList.add('ob-tour-active');
         this.renderStep();
     },
 
-    clearNavHighlight() {
-        document.querySelectorAll('#mainNav .segment-btn.nav-tour-highlight').forEach(el => {
-            el.classList.remove('nav-tour-highlight');
-        });
-    },
-
-    finish(shouldMarkSeen = true) {
-        const modal = document.getElementById('onboardingModal');
-        if (modal) modal.style.display = 'none';
+    finish(shouldMarkSeen = true, returnToPortal = false) {
+        const layer = document.getElementById('onboardingTourLayer');
+        if (layer) layer.style.display = 'none';
         this.isOpen = false;
-        this.clearNavHighlight();
+        document.body.classList.remove('ob-tour-active');
+        if (this._repositionTimer) {
+            clearTimeout(this._repositionTimer);
+            this._repositionTimer = null;
+        }
         if (shouldMarkSeen && this.activeUserKey) {
             this.markSeen(this.activeUserKey);
+        }
+        if (returnToPortal && typeof window.switchMode === 'function') {
+            window.switchMode('portal');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     },
 
@@ -303,43 +249,45 @@ const OnboardingModule = {
             .replace(/"/g, '&quot;');
     },
 
+    getTargetElement(step) {
+        if (!step || !step.selector) return null;
+        const el = document.querySelector(step.selector);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return null;
+        return el;
+    },
+
     renderStep() {
         const step = this.STEPS[this.currentStep];
         if (!step) return;
 
-        const kickerEl = document.getElementById('obKicker');
+        // 1. Live-navigate the actual website to the step's workspace so the real button/feature is visible!
+        if (typeof window.switchMode === 'function' && step.mode) {
+            window.switchMode(step.mode, step.subTab || 'vocab');
+        }
+
+        // 2. Populate compact coachmark content
         const badgeEl = document.getElementById('obStepBadge');
-        const titleEl = document.getElementById('obTitle');
-        const subEl = document.getElementById('obSubtitle');
-        const iconEl = document.getElementById('obHeroIcon');
-        const gridEl = document.getElementById('obHighlightsGrid');
-        const tipEl = document.getElementById('obTipText');
-        const fillEl = document.getElementById('obProgressFill');
         const countEl = document.getElementById('obStepCounter');
+        const fillEl = document.getElementById('obProgressFill');
+        const titleEl = document.getElementById('obTitle');
+        const descEl = document.getElementById('obSubtitle');
+        const actEl = document.getElementById('obActionList');
         const dotsEl = document.getElementById('obStepDots');
         const btnPrev = document.getElementById('btnOnboardingPrev');
         const btnNext = document.getElementById('btnOnboardingNext');
 
-        if (kickerEl) kickerEl.textContent = step.kicker;
         if (badgeEl) badgeEl.textContent = step.badge;
-        if (titleEl) titleEl.textContent = step.title;
-        if (subEl) subEl.textContent = step.subtitle;
-        if (iconEl) iconEl.innerHTML = `<i class="fa-solid ${step.icon}"></i>`;
-        if (tipEl) tipEl.textContent = step.tip;
-
+        if (countEl) countEl.textContent = `0${this.currentStep + 1} / 0${this.STEPS.length}`;
         const pct = Math.round(((this.currentStep + 1) / this.STEPS.length) * 100);
         if (fillEl) fillEl.style.width = `${pct}%`;
-        if (countEl) countEl.textContent = `0${this.currentStep + 1} / 0${this.STEPS.length}`;
+        if (titleEl) titleEl.textContent = step.title;
+        if (descEl) descEl.textContent = step.desc;
 
-        if (gridEl) {
-            gridEl.innerHTML = step.highlights.map(item => `
-                <div class="ob-feature-card">
-                    <div class="ob-feature-icon"><i class="fa-solid ${item.icon}"></i></div>
-                    <div class="ob-feature-body">
-                        <strong>${this.esc(item.title)}</strong>
-                        <p>${this.esc(item.desc)}</p>
-                    </div>
-                </div>
+        if (actEl) {
+            actEl.innerHTML = (step.actions || []).map(line => `
+                <li><i class="fa-solid fa-check"></i><span>${this.esc(line)}</span></li>
             `).join('');
         }
 
@@ -356,21 +304,93 @@ const OnboardingModule = {
         }
 
         if (btnPrev) {
-            btnPrev.style.visibility = this.currentStep === 0 ? 'hidden' : 'visible';
+            btnPrev.style.display = this.currentStep === 0 ? 'none' : 'inline-flex';
         }
         if (btnNext) {
             const isLast = this.currentStep === this.STEPS.length - 1;
             btnNext.innerHTML = isLast
-                ? '<i class="fa-solid fa-check"></i> 开始我的学习之旅'
+                ? '<i class="fa-solid fa-check"></i> 开始学习'
                 : '下一步 <i class="fa-solid fa-arrow-right"></i>';
         }
 
-        // Highlight matching top navigation tab so students immediately learn where each feature lives
-        this.clearNavHighlight();
-        if (step.navSelector) {
-            const navTarget = document.querySelector(step.navSelector);
-            if (navTarget) navTarget.classList.add('nav-tour-highlight');
+        // 3. Scroll live target cleanly into view & lock focus spotlight cutout + floating coachmark immediately
+        if (this._repositionTimer) clearTimeout(this._repositionTimer);
+        requestAnimationFrame(() => {
+            const target = this.getTargetElement(step);
+            if (target) {
+                const r = target.getBoundingClientRect();
+                const inView = r.top >= 76 && r.bottom <= window.innerHeight - 180;
+                if (!inView) {
+                    target.scrollIntoView({ behavior: 'auto', block: 'center' });
+                }
+            }
+            this.positionSpotlight();
+            // Double-check after async workspace data (e.g. vocab list / leaderboard) settles
+            this._repositionTimer = setTimeout(() => this.positionSpotlight(), 160);
+        });
+    },
+
+    positionSpotlight() {
+        if (!this.isOpen) return;
+        const step = this.STEPS[this.currentStep];
+        const spot = document.getElementById('obSpotlightBox');
+        const card = document.getElementById('obTourCard');
+        const fallbackDim = document.getElementById('obFallbackBackdrop');
+        if (!spot || !card) return;
+
+        const target = this.getTargetElement(step);
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        // Force fresh layout measurement after step content update
+        const cardW = Math.min(400, vw - 24);
+        const cardH = Math.ceil(card.offsetHeight || card.getBoundingClientRect().height || 260);
+
+        if (!target) {
+            spot.style.display = 'none';
+            if (fallbackDim) fallbackDim.style.display = 'block';
+            card.style.left = `${Math.max(12, Math.round((vw - cardW) / 2))}px`;
+            card.style.top = `${Math.max(16, Math.round((vh - cardH) / 2))}px`;
+            return;
         }
+
+        if (fallbackDim) fallbackDim.style.display = 'none';
+        const r = target.getBoundingClientRect();
+        const pad = 8;
+        const sx = Math.max(4, Math.round(r.left - pad));
+        const sy = Math.max(4, Math.round(r.top - pad));
+        const sw = Math.min(vw - sx - 4, Math.round(r.width + pad * 2));
+        const sh = Math.min(vh - sy - 4, Math.round(r.height + pad * 2));
+
+        spot.style.display = 'block';
+        spot.style.left = `${sx}px`;
+        spot.style.top = `${sy}px`;
+        spot.style.width = `${sw}px`;
+        spot.style.height = `${sh}px`;
+
+        // Smart placement: prefer below target; if not enough room below, place above; else dock cleanly in best corner
+        const gap = 14;
+        let top;
+        let left = Math.round(sx + (sw - cardW) / 2);
+
+        const spaceBelow = vh - (sy + sh);
+        const spaceAbove = sy;
+
+        if (spaceBelow >= cardH + gap + 12) {
+            top = sy + sh + gap;
+        } else if (spaceAbove >= cardH + gap + 12) {
+            top = sy - cardH - gap;
+        } else {
+            // Very tall target: place neatly at bottom-right or top-right without clipping
+            top = Math.max(14, vh - cardH - 18);
+            left = vw - cardW - 18;
+        }
+
+        // Clamp inside viewport cleanly
+        left = Math.max(12, Math.min(left, vw - cardW - 12));
+        top = Math.max(12, Math.min(top, vh - cardH - 12));
+
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
     }
 };
 

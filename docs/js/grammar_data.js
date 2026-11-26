@@ -555,10 +555,10 @@ const GRAMMAR_TOPICS = [
     {
         id: 'kp5_where_when',
         number: '05',
-        title: '地点与时间 (where / when / in which)',
-        subtitle: 'where = there = 介词 + which；警惕 “where + 动词” 的致命陷阱',
+        title: '地点与时间 (where / when)',
+        subtitle: 'where 替代地点状语 there；when 替代时间状语；警惕 “where + 动词” 的致命陷阱',
         badge: '最易踩坑',
-        summary: 'Use where only when you can restate the location with "there" (or in/at/on which). Never use where as the subject of a verb! For time, use when, (that), or Ø.',
+        summary: 'Use where only when you can restate the location with "there". Never use where as the subject of a verb! For time, use when, (that), or Ø.',
         videoScenes: [
             {
                 duration: 5000,
@@ -569,20 +569,20 @@ const GRAMMAR_TOPICS = [
                 highlightTarget: 'has beautiful scenery (缺主语)',
                 highlightPronoun: 'that / which',
                 resultSentence: '✅ Stockholm is a city [that / which] has beautiful scenery.',
-                cnTip: '超级口诀：把地点带回从句！需要“在那里 (there / in it)”用 where / in which；本身作主语或宾语用 which / that！',
-                rulePill: 'where = there = 介词+which | where 绝不能作主语'
+                cnTip: '超级口诀：把地点带回从句！需要“在那里 (there)”作地点状语时用 where；本身作主语或宾语时用 which / that！',
+                rulePill: 'where = there (地点状语) | where 绝不能作主语'
             },
             {
                 duration: 4500,
-                badge: 'Scene 2 · where vs in which vs Ø',
-                title: '想省略 Ø 时，介词必须保留在从句里！',
-                leftSentence: '✅ the house [where] my father grew up',
-                rightSentence: '✅ the house [in which] my father grew up',
+                badge: 'Scene 2 · where vs Ø 与时间名词 when',
+                title: '地点从句句末无介词时必须用 where（不可省略 Ø）',
+                leftSentence: '✅ the house [where] my father grew up (= grew up there)',
+                rightSentence: '❌ the house [Ø] my father grew up (缺少介词 in！)',
                 highlightTarget: 'grew up (后面没有 in)',
-                highlightPronoun: 'where / in which (不可用 Ø)',
+                highlightPronoun: 'where (不可用 Ø)',
                 resultSentence: '只有写成 "...the house (that/which/Ø) my father grew up IN" 才能用 Ø！',
                 cnTip: '时间名词（the day / a time）作状语时比较特殊：when / that / Ø 三者都可以！',
-                rulePill: '地点无介词只用 where/in which；时间 when/that/Ø 都行'
+                rulePill: '地点无介词只用 where；时间 when / that / Ø 都行'
             }
         ],
         questions: [
@@ -590,16 +590,16 @@ const GRAMMAR_TOPICS = [
                 id: 'kp5_q1',
                 type: 'multi',
                 sourceTag: 'Packet 4 · B8 #2',
-                prompt: '选出所有可以填入括号的正确选项（注意 grew up 后面没有 in）：',
+                prompt: '选出唯一可以填入括号的正确选项（注意 grew up 后面没有 in）：',
                 sentence: 'I was surprised to see the log house ( ______ ) my father grew up.',
-                options: ['where', 'in which', 'Ø'],
-                correctAnswers: ['where', 'in which'],
-                hint: 'my father grew up IN the log house。句末没有 in，所以必须自带介词含义的 where 或 in which！',
+                options: ['where', 'which', 'Ø'],
+                correctAnswers: ['where'],
+                hint: 'my father grew up there (in the log house)。句末没有 in，所以必须用自带地点状语含义的 where，不能单独用 which 或省略 Ø！',
                 mindMap: {
                     antecedent: 'the log house (地点)',
-                    role: '地点状语 (grew up IN it → there)',
+                    role: '地点状语 (grew up there)',
                     placement: '句末没有介词 in',
-                    trap: '若选 Ø，句子变成 my father grew up the log house，缺少介词 in！'
+                    trap: '句末缺少介词 in，因此不能单独用 which，也不能省略 Ø，唯一正确答案是 where！'
                 }
             },
             {
@@ -626,12 +626,12 @@ const GRAMMAR_TOPICS = [
                 sentence: 'I have fond memories of the day ( ______ ) I met my wife.',
                 options: ['that', 'when', 'Ø', 'which'],
                 correctAnswers: ['that', 'when', 'Ø'],
-                hint: 'time 名词（the day）在限定性从句中可以用 when、that，也可以省略 Ø（但不能单独用 which，除非写成 on which）。',
+                hint: 'time 名词（the day）在限定性从句中可以用 when、that，也可以省略 Ø（但不能单独用 which）。',
                 mindMap: {
                     antecedent: 'the day (时间)',
                     role: '时间状语 (on that day)',
                     placement: '限定性时间从句',
-                    trap: 'which 必须配合介词 on which 才能表时间；when / that / Ø 均正确'
+                    trap: '不能单独用 which 表时间；when / that / Ø 均正确'
                 }
             },
             {
@@ -642,12 +642,12 @@ const GRAMMAR_TOPICS = [
                 sentence: 'Hong Kong is the city ( ______ ) I was born.',
                 options: ['that', 'where', 'which'],
                 correctAnswers: ['where'],
-                hint: 'I was born IN Hong Kong（= there），句末没有 in！',
+                hint: 'I was born there (in Hong Kong)，句末没有 in，所以必须用 where！',
                 mindMap: {
                     antecedent: 'the city (地点)',
-                    role: '地点状语 (was born there / in it)',
+                    role: '地点状语 (was born there)',
                     placement: '句末无 in',
-                    trap: 'that / which 不能单独充当地点状语（除非加 in：in which / that...in）'
+                    trap: 'that / which 不能单独充当地点状语，必须用 where'
                 }
             },
             {
@@ -674,8 +674,7 @@ const GRAMMAR_TOPICS = [
                 sentences: ['My driveway is in front of my house.', 'I park four cars there.'],
                 accepted: [
                     'My driveway, where I park four cars, is in front of my house.',
-                    'My driveway where I park four cars is in front of my house.',
-                    'My driveway, in which I park four cars, is in front of my house.'
+                    'My driveway where I park four cars is in front of my house.'
                 ],
                 sampleAnswer: 'My driveway, where I park four cars, is in front of my house.',
                 hint: '用 where 替换句末的 there，并把定语从句放在 My driveway 后面（记得删掉 there！）。',

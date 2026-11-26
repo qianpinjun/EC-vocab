@@ -224,7 +224,7 @@ const GrammarVideoPlayer = {
 
         // Try loading pre-rendered kinetic 24fps MP4 video first
         if (videoId && realVideo && realWrap) {
-            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=3`;
+            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=4`;
             if (fallbackWrap) fallbackWrap.style.display = 'none';
             if (dotsWrap) dotsWrap.style.display = 'none';
             if (stepCounter) stepCounter.textContent = '24fps MP4 · AI 语音';
