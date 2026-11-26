@@ -1,5 +1,15 @@
 // Packet 4 Grammar Studio: Animated Video Player, Multi-Select & Sentence-Combine Grader, Mind Map & Mistake Loop
 
+const PRE_RENDERED_VIDEO_IDS = new Set([
+    'kp1_placement', 'kp2_subjects', 'kp3_objects', 'kp4_whose', 'kp5_where_when', 'kp6_commas',
+    'kp1_q1', 'kp1_q2', 'kp1_q3', 'kp1_q4', 'kp1_q5',
+    'kp2_q1', 'kp2_q2', 'kp2_q3', 'kp2_q4', 'kp2_q5', 'kp2_q6',
+    'kp3_q1', 'kp3_q2', 'kp3_q3', 'kp3_q4', 'kp3_q5', 'kp3_q6',
+    'kp4_q1', 'kp4_q2', 'kp4_q3', 'kp4_q4', 'kp4_q5',
+    'kp5_q1', 'kp5_q2', 'kp5_q3', 'kp5_q4', 'kp5_q5', 'kp5_q6',
+    'kp6_q1', 'kp6_q2', 'kp6_q3', 'kp6_q4', 'kp6_q5', 'kp6_q6'
+]);
+
 const GrammarVideoPlayer = {
     scenes: [],
     currentIndex: 0,
@@ -222,8 +232,8 @@ const GrammarVideoPlayer = {
         if (seekBar) seekBar.value = '0';
         if (timeText) timeText.textContent = '0:00 / 0:00';
 
-        // Try loading pre-rendered kinetic 24fps MP4 video first
-        if (videoId && realVideo && realWrap) {
+        // Try loading pre-rendered kinetic 24fps MP4 video first (only if pre-rendered, avoiding 404 noise)
+        if (videoId && PRE_RENDERED_VIDEO_IDS.has(videoId) && realVideo && realWrap) {
             const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=4`;
             if (fallbackWrap) fallbackWrap.style.display = 'none';
             if (dotsWrap) dotsWrap.style.display = 'none';
@@ -510,8 +520,9 @@ function gradeCombinedSentence(userRaw, question) {
     if (/\b(whom|which|that|who)\b.*\b(him|her|it|them|there)\s*$/.test(userNorm)) {
         return { isCorrect: false, diagnosis: '句末保留了多余的代词 (him/it/there)，用关系词替换后必须把原句里的重复代词删掉。' };
     }
-    if (!/\b(who|whom|whose|which|that|where|when)\b/.test(userNorm) && question.id !== 'kp3_q5' && question.id !== 'kp3_q6') {
-        return { isCorrect: false, diagnosis: '句中缺少引导定语从句的关系词（如 who / which / that / whose / where）。' };
+    const allowsOmission = acceptedList.some(a => !/\b(who|whom|whose|which|that|where|when)\b/.test(a));
+    if (!/\b(who|whom|whose|which|that|where|when)\b/.test(userNorm) && !allowsOmission) {
+        return { isCorrect: false, diagnosis: '句中缺少引导定语从句的关系词（如 who / which / that / whose / where / when）。' };
     }
 
     return {
@@ -562,7 +573,27 @@ const GrammarModule = {
         if (btnStartAfterVideo) {
             btnStartAfterVideo.onclick = () => {
                 GrammarVideoPlayer.stop();
-                this.startQuiz(this.activeTopic.questions, false);
+                this.startQuiz(this.activeTopic.questions, false, '全题型综合练习');
+            };
+        }
+
+        const btnStartMultiAfterVideo = document.getElementById('btnGrammarStartMulti');
+        if (btnStartMultiAfterVideo) {
+            btnStartMultiAfterVideo.onclick = () => {
+                if (!this.activeTopic) return;
+                GrammarVideoPlayer.stop();
+                const qs = (this.activeTopic.questions || []).filter(q => q.type === 'multi');
+                this.startQuiz(qs, false, '题型一 · 多项对比选择专练');
+            };
+        }
+
+        const btnStartCombineAfterVideo = document.getElementById('btnGrammarStartCombine');
+        if (btnStartCombineAfterVideo) {
+            btnStartCombineAfterVideo.onclick = () => {
+                if (!this.activeTopic) return;
+                GrammarVideoPlayer.stop();
+                const qs = (this.activeTopic.questions || []).filter(q => q.type === 'combine');
+                this.startQuiz(qs, false, '题型二 · 合并写句专练');
             };
         }
 
@@ -654,8 +685,8 @@ const GrammarModule = {
         window.GRAMMAR_TOPICS.forEach(topic => {
             const card = document.createElement('div');
             card.className = 'content-card grammar-topic-card';
-            const multiCount = topic.questions.filter(q => q.type === 'multi').length;
-            const combineCount = topic.questions.filter(q => q.type === 'combine').length;
+            const multiQs = topic.questions.filter(q => q.type === 'multi');
+            const combineQs = topic.questions.filter(q => q.type === 'combine');
             card.innerHTML = `
                 <div class="topic-card-top">
                     <span class="round-tag">KP ${topic.number}</span>
@@ -664,56 +695,114 @@ const GrammarModule = {
                 <h3 class="topic-title">${topic.title}</h3>
                 <p class="topic-sub">${topic.subtitle}</p>
                 <div class="topic-meta">
-                    <span><i class="fa-solid fa-film"></i> ${topic.videoScenes.length} 段微视频</span>
-                    <span><i class="fa-solid fa-list-check"></i> ${topic.questions.length} 题（多选 ${multiCount} + 合并 ${combineCount}）</span>
+                    <span><i class="fa-solid fa-film"></i> ${topic.videoScenes.length} 段微课</span>
+                    <span><i class="fa-solid fa-layer-group"></i> 共 ${topic.questions.length} 题</span>
                 </div>
+
+                <!-- Explicit 2-Type Question Track Split Under Each Knowledge Point -->
+                <div class="g-type-split">
+                    <button type="button" class="g-type-track is-multi btn-kp-multi">
+                        <div class="g-type-track-top">
+                            <span class="g-type-pill">题型一</span>
+                            <span class="g-type-count">${multiQs.length} 题</span>
+                        </div>
+                        <div class="g-type-track-name">多项对比选择</div>
+                        <div class="g-type-track-hint">B8 / Review A 选词填空 &rarr;</div>
+                    </button>
+                    <button type="button" class="g-type-track is-combine btn-kp-combine">
+                        <div class="g-type-track-top">
+                            <span class="g-type-pill">题型二</span>
+                            <span class="g-type-count">${combineQs.length} 题</span>
+                        </div>
+                        <div class="g-type-track-name">合并写句</div>
+                        <div class="g-type-track-hint">Page 10 / B6 整句拼合 &rarr;</div>
+                    </button>
+                </div>
+
                 <div class="topic-actions">
                     <button type="button" class="btn btn-primary btn-sm btn-open-kp">
-                        <i class="fa-solid fa-play"></i> 视频提醒 + 刷题
+                        <i class="fa-solid fa-play"></i> 微课视频 + 刷题
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm btn-skip-kp">
-                        直接做题
+                        全部 ${topic.questions.length} 题混刷
                     </button>
                 </div>
             `;
 
+            card.querySelector('.btn-kp-multi').onclick = () => {
+                this.activeTopic = topic;
+                this.startQuiz(multiQs, false, '题型一 · 多项对比选择专练');
+            };
+            card.querySelector('.btn-kp-combine').onclick = () => {
+                this.activeTopic = topic;
+                this.startQuiz(combineQs, false, '题型二 · 合并写句专练');
+            };
             card.querySelector('.btn-open-kp').onclick = () => this.openTopicVideo(topic);
             card.querySelector('.btn-skip-kp').onclick = () => {
                 this.activeTopic = topic;
-                this.startQuiz(topic.questions, false);
+                this.startQuiz(topic.questions, false, '全题型综合练习');
             };
             grid.appendChild(card);
         });
 
-        // Add Mixed Packet 4 Challenge Card
+        // Add Mixed Packet 4 Challenge Card (Also Split by Question Type!)
+        const allMulti = window.GRAMMAR_TOPICS.flatMap(t => t.questions.filter(q => q.type === 'multi'));
+        const allCombine = window.GRAMMAR_TOPICS.flatMap(t => t.questions.filter(q => q.type === 'combine'));
+        const allQsTotal = allMulti.length + allCombine.length;
+
         const mixedCard = document.createElement('div');
         mixedCard.className = 'content-card grammar-topic-card grammar-mixed-card';
         mixedCard.innerHTML = `
             <div class="topic-card-top">
                 <span class="round-tag">综合挑战</span>
-                <span class="domain-tag">Packet 4 全考点</span>
+                <span class="domain-tag">Packet 4 全考点 · ${allQsTotal} 题库</span>
             </div>
-            <h3 class="topic-title">Unit 14 综合真题演练 (8 题精选)</h3>
-            <p class="topic-sub">随机抽取 6 个知识点的多选题（B8）与合句题（Page 10 / B6），全面检验掌握度并生成专属错题思维导图。</p>
-            <div class="topic-meta">
-                <span><i class="fa-solid fa-bolt"></i> 随机组卷 8 题</span>
-                <span><i class="fa-solid fa-diagram-project"></i> 错题自动生成思维导图 + 视频讲解</span>
+            <h3 class="topic-title">Unit 14 全考点随机模拟演练</h3>
+            <p class="topic-sub">跨 KP 01 – KP 06 随机组卷：支持单独专攻「题型一多选」或「题型二合并写句」，也可直接挑战双题型综合卷。</p>
+            <div class="g-type-split">
+                <button type="button" class="g-type-track is-multi" id="btnStartMixedMulti">
+                    <div class="g-type-track-top">
+                        <span class="g-type-pill">题型一 · 全考点</span>
+                        <span class="g-type-count">随机 10 题</span>
+                    </div>
+                    <div class="g-type-track-name">全考点多选专练</div>
+                    <div class="g-type-track-hint">从 ${allMulti.length} 道多选题随机抽测 &rarr;</div>
+                </button>
+                <button type="button" class="g-type-track is-combine" id="btnStartMixedCombine">
+                    <div class="g-type-track-top">
+                        <span class="g-type-pill">题型二 · 全考点</span>
+                        <span class="g-type-count">随机 8 题</span>
+                    </div>
+                    <div class="g-type-track-name">全考点合句专练</div>
+                    <div class="g-type-track-hint">从 ${allCombine.length} 道合句题随机抽测 &rarr;</div>
+                </button>
             </div>
             <div class="topic-actions">
                 <button type="button" class="btn btn-primary btn-sm" id="btnStartMixedGrammar">
-                    <i class="fa-solid fa-rocket"></i> 开始综合挑战
+                    <i class="fa-solid fa-rocket"></i> 双题型综合挑战 (10 题)
                 </button>
             </div>
         `;
+        mixedCard.querySelector('#btnStartMixedMulti').onclick = () => {
+            const picked = allMulti.slice().sort(() => Math.random() - 0.5).slice(0, 10);
+            this.activeTopic = { id: 'mixed_packet4_multi', title: 'Packet 4 · 全考点多项选择专练', questions: picked };
+            this.startQuiz(picked, false, '题型一 · 全考点多选专练');
+        };
+        mixedCard.querySelector('#btnStartMixedCombine').onclick = () => {
+            const picked = allCombine.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+            this.activeTopic = { id: 'mixed_packet4_combine', title: 'Packet 4 · 全考点合并写句专练', questions: picked };
+            this.startQuiz(picked, false, '题型二 · 全考点合句专练');
+        };
         mixedCard.querySelector('#btnStartMixedGrammar').onclick = () => {
-            const allQs = window.GRAMMAR_TOPICS.flatMap(t => t.questions);
-            const shuffled = allQs.slice().sort(() => Math.random() - 0.5).slice(0, 8);
+            const pickM = allMulti.slice().sort(() => Math.random() - 0.5).slice(0, 5);
+            const pickC = allCombine.slice().sort(() => Math.random() - 0.5).slice(0, 5);
+            const shuffled = [...pickM, ...pickC].sort(() => Math.random() - 0.5);
             this.activeTopic = {
                 id: 'mixed_packet4',
-                title: 'Packet 4 · Unit 14 综合真题演练',
+                title: 'Packet 4 · Unit 14 双题型综合演练',
                 questions: shuffled
             };
-            this.startQuiz(shuffled, false);
+            this.startQuiz(shuffled, false, '双题型综合模拟卷');
         };
         grid.appendChild(mixedCard);
     },
@@ -724,10 +813,20 @@ const GrammarModule = {
         const mount = document.getElementById('gQuickVideoMount');
         const stage = document.getElementById('gVideoPlayerShell');
         if (mount && stage) mount.appendChild(stage);
+
+        const multiCount = (topic.questions || []).filter(q => q.type === 'multi').length;
+        const combineCount = (topic.questions || []).filter(q => q.type === 'combine').length;
+        const btnMulti = document.getElementById('btnGrammarStartMulti');
+        const btnCombine = document.getElementById('btnGrammarStartCombine');
+        const btnAll = document.getElementById('btnGrammarStartPractice');
+        if (btnMulti) btnMulti.innerHTML = `<i class="fa-solid fa-list-check"></i> 专练题型一 · 多选 (${multiCount} 题)`;
+        if (btnCombine) btnCombine.innerHTML = `<i class="fa-solid fa-pen-nib"></i> 专练题型二 · 合句 (${combineCount} 题)`;
+        if (btnAll) btnAll.innerHTML = `<i class="fa-solid fa-layer-group"></i> 刷全部 (${topic.questions.length} 题)`;
+
         GrammarVideoPlayer.load(topic.videoScenes, `Quick Reminder · ${topic.title}`, null, topic.id);
     },
 
-    startQuiz(questions, isRetry = false) {
+    startQuiz(questions, isRetry = false, modeLabel = '') {
         this.currentQuestions = questions.slice();
         this.currentIndex = 0;
         this.mistakes = [];
@@ -738,7 +837,7 @@ const GrammarModule = {
         const badge = document.getElementById('gQuizTopicBadge');
         const modeTag = document.getElementById('gQuizModeTag');
         if (badge) badge.textContent = this.activeTopic ? this.activeTopic.title : 'Packet 4 Grammar';
-        if (modeTag) modeTag.textContent = isRetry ? '错题重做模式' : '标准练习模式';
+        if (modeTag) modeTag.textContent = isRetry ? '错题重做模式' : (modeLabel || '标准练习模式');
 
         this.renderQuestion();
     },

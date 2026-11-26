@@ -150,6 +150,121 @@ const GRAMMAR_TOPICS = [
                     placement: '必须紧跟 The car，不可拆开到 is outside 后面',
                     trap: '错误选项 3 位置错位；错误选项 4 犯了双主语 (which it) 错误'
                 }
+            },
+            {
+                id: 'kp1_q6',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 1',
+                prompt: '选出所有语序正确且无多余代词的句子（可多选）：',
+                sentence: '判断以下哪句正确合并了 “The student won the debate.” + “She wrote the opening essay.”：',
+                options: [
+                    'The student who wrote the opening essay won the debate.',
+                    'The student that wrote the opening essay won the debate.',
+                    'The student won the debate who wrote the opening essay.',
+                    'The student who she wrote the opening essay won the debate.'
+                ],
+                correctAnswers: [
+                    'The student who wrote the opening essay won the debate.',
+                    'The student that wrote the opening essay won the debate.'
+                ],
+                hint: '定语从句必须紧插在主语 The student 后面，且删除重复主语 she。',
+                mindMap: {
+                    antecedent: 'The student (主语 · 人)',
+                    role: '从句主语 (She → who / that)',
+                    placement: '紧贴 The student，放在 won the debate 之前',
+                    trap: '选项 3 把从句误放到了 debate 后面；选项 4 多余保留了 she'
+                }
+            },
+            {
+                id: 'kp1_q7',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 2',
+                prompt: '识别完整句 vs 残缺从句：选出所有【语法完整、可独立成句】的选项：',
+                sentence: '判断下面哪些句子是完整的独立句（Independent + Dependent 正确结合）：',
+                options: [
+                    'The library that opened last autumn has quiet study rooms.',
+                    'Which opened last autumn near the main campus gate.',
+                    'We visited a museum that displayed ancient maps.',
+                    'The laptop that I ordered online yesterday afternoon.'
+                ],
+                correctAnswers: [
+                    'The library that opened last autumn has quiet study rooms.',
+                    'We visited a museum that displayed ancient maps.'
+                ],
+                hint: '检查主句是否有完整的谓语动词！选项 2 只有从句，选项 4 主语 The laptop 后面缺少主句谓语动词。',
+                mindMap: {
+                    antecedent: 'The library / a museum',
+                    role: '辨析完整主句 vs 残缺片段 (Fragment)',
+                    placement: '从句只能修饰名词，不能替代主句谓语',
+                    trap: '选项 4 看似很长，但主句缺少谓语动词，属于典型残缺句！'
+                }
+            },
+            {
+                id: 'kp1_q8',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 3',
+                prompt: '选出所有将定语从句放在【正确先行词后】的句子：',
+                sentence: '想表达“那位站在讲台旁的老师表扬了我们”，哪些写法位置正确？',
+                options: [
+                    'The teacher who stood beside the podium praised us.',
+                    'The teacher that stood beside the podium praised us.',
+                    'The teacher praised us who stood beside the podium.',
+                    'Who stood beside the podium the teacher praised us.'
+                ],
+                correctAnswers: [
+                    'The teacher who stood beside the podium praised us.',
+                    'The teacher that stood beside the podium praised us.'
+                ],
+                hint: 'who stood beside the podium 修饰的是 The teacher，必须紧贴 The teacher。',
+                mindMap: {
+                    antecedent: 'The teacher (人)',
+                    role: '从句主语 (who / that)',
+                    placement: '修饰主语时插在主语和主句动词 praised 之间',
+                    trap: '不能把定语从句放到 us 后面，也不能放到主语前面'
+                }
+            },
+            {
+                id: 'kp1_q9',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 4',
+                prompt: '选出所有语法正确的句子（修饰宾语位置）：',
+                sentence: '合并 “Maya read an article.” + “It explained coastal erosion.”：',
+                options: [
+                    'Maya read an article that explained coastal erosion.',
+                    'Maya read an article which explained coastal erosion.',
+                    'Maya who read an article explained coastal erosion.',
+                    'Maya read an article that it explained coastal erosion.'
+                ],
+                correctAnswers: [
+                    'Maya read an article that explained coastal erosion.',
+                    'Maya read an article which explained coastal erosion.'
+                ],
+                hint: 'It 指代宾语 an article，所以从句紧跟在 an article 后面，用 that 或 which。',
+                mindMap: {
+                    antecedent: 'an article (宾语 · 物)',
+                    role: '从句主语 (It → that / which)',
+                    placement: '直接紧跟宾语 an article 之后',
+                    trap: '选项 3 改错了修饰对象；选项 4 犯了双主语 (that it) 错误'
+                }
+            },
+            {
+                id: 'kp1_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 1',
+                prompt: '将下面两句话用定语从句合并为一句（注意从句紧跟所修饰的主语）：',
+                sentences: ['The scientist won a national prize.', 'She discovered the new vaccine.'],
+                accepted: [
+                    'The scientist who discovered the new vaccine won a national prize.',
+                    'The scientist that discovered the new vaccine won a national prize.'
+                ],
+                sampleAnswer: 'The scientist who discovered the new vaccine won a national prize.',
+                hint: 'She 指代 The scientist，将 who/that discovered the new vaccine 紧插在 The scientist 后面。',
+                mindMap: {
+                    antecedent: 'The scientist (主语 · 人)',
+                    role: '从句主语 (She → who / that)',
+                    placement: 'The scientist [who discovered the new vaccine] won...',
+                    trap: '不能把从句放到 prize 后面，也不要保留 she'
+                }
             }
         ]
     },
@@ -287,6 +402,83 @@ const GRAMMAR_TOPICS = [
                     role: '从句主语 (It → that / which)',
                     placement: '插在 airplane 与 had 之间',
                     trap: '记得删掉 It，且不要把从句放到 accident 后面'
+                }
+            },
+            {
+                id: 'kp2_q7',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 5',
+                prompt: '选出所有可以填入括号的正确选项（注意主谓一致与指物规则）：',
+                sentence: 'The bridge ( ______ ) connects the two islands was built in 1962.',
+                options: ['which', 'that', 'who', 'Ø'],
+                correctAnswers: ['which', 'that'],
+                hint: 'The bridge 是物，且空格后紧跟动词 connects（作主语），所以只能选 which 或 that，不能省略 Ø！',
+                mindMap: {
+                    antecedent: 'The bridge (单数 · 物)',
+                    role: '作从句主语 (connects)',
+                    placement: '限定性定语从句',
+                    trap: 'who 只能指人；关系代词作主语时绝不可省略 Ø'
+                }
+            },
+            {
+                id: 'kp2_q8',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 2',
+                prompt: '用 who 或 that 将下面两句话合并为一句：',
+                sentences: ['The volunteer spoke three languages.', 'He guided the visitors through the hall.'],
+                accepted: [
+                    'The volunteer who guided the visitors through the hall spoke three languages.',
+                    'The volunteer that guided the visitors through the hall spoke three languages.',
+                    'The volunteer who spoke three languages guided the visitors through the hall.',
+                    'The volunteer that spoke three languages guided the visitors through the hall.'
+                ],
+                sampleAnswer: 'The volunteer who guided the visitors through the hall spoke three languages.',
+                hint: 'He 指代 The volunteer（人），用 who / that 替换 He 并紧跟在 The volunteer 后面。',
+                mindMap: {
+                    antecedent: 'The volunteer (人)',
+                    role: '从句主语 (He → who / that)',
+                    placement: '插在 The volunteer 与主句谓语之间',
+                    trap: '删除多余主语 He，不可写成 who he guided'
+                }
+            },
+            {
+                id: 'kp2_q9',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 3',
+                prompt: '用 which 或 that 将下面两句话合并为一句：',
+                sentences: ['We bought a dictionary.', 'It includes clear grammar examples.'],
+                accepted: [
+                    'We bought a dictionary that includes clear grammar examples.',
+                    'We bought a dictionary which includes clear grammar examples.'
+                ],
+                sampleAnswer: 'We bought a dictionary that includes clear grammar examples.',
+                hint: 'It 指代 a dictionary（物），删掉 It 换成 that 或 which。',
+                mindMap: {
+                    antecedent: 'a dictionary (单数 · 物)',
+                    role: '从句主语 (It → that / which)',
+                    placement: '直接接在 a dictionary 后面',
+                    trap: '作主语不可省略，且动词 includes 保持单数'
+                }
+            },
+            {
+                id: 'kp2_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 4',
+                prompt: '用定语从句合并下面两句话（注意复数先行词与谓语动词一致）：',
+                sentences: ['The engineers designed a safer bridge.', 'They worked on the river project.'],
+                accepted: [
+                    'The engineers who worked on the river project designed a safer bridge.',
+                    'The engineers that worked on the river project designed a safer bridge.',
+                    'The engineers who designed a safer bridge worked on the river project.',
+                    'The engineers that designed a safer bridge worked on the river project.'
+                ],
+                sampleAnswer: 'The engineers who worked on the river project designed a safer bridge.',
+                hint: 'They 指代 The engineers（人），用 who / that 替换 They 紧跟在 The engineers 后面。',
+                mindMap: {
+                    antecedent: 'The engineers (复数 · 人)',
+                    role: '从句主语 (They → who / that)',
+                    placement: 'The engineers [who worked on the river project] designed...',
+                    trap: '不能保留 they（❌ who they worked）'
                 }
             }
         ]
@@ -429,6 +621,85 @@ const GRAMMAR_TOPICS = [
                     placement: '紧跟 a boy 之后',
                     trap: '不要在句末保留 him（❌ whom my father disliked him）'
                 }
+            },
+            {
+                id: 'kp3_q7',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 6',
+                prompt: '选出所有可以填入括号的正确选项（注意介词 for 已经在句末）：',
+                sentence: 'The scholarship ( ______ ) she applied for covers full tuition.',
+                options: ['that', 'which', 'Ø', 'for which'],
+                correctAnswers: ['that', 'which', 'Ø'],
+                hint: '句末已经有 for 了！不能再选 for which（否则重复两个 for）；物作限定性宾语时 that / which / Ø 全对！',
+                mindMap: {
+                    antecedent: 'The scholarship (物)',
+                    role: '作 applied for 的宾语',
+                    placement: '介词 for 留在句末',
+                    trap: '若选 for which 会造成 “for which ... applied for” 介词重复错误！'
+                }
+            },
+            {
+                id: 'kp3_q8',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 5',
+                prompt: '将下面两句话合并为一句（可使用 that / which 或省略关系词）：',
+                sentences: ['The novel was inspiring.', 'Our English teacher recommended it.'],
+                accepted: [
+                    'The novel that our English teacher recommended was inspiring.',
+                    'The novel which our English teacher recommended was inspiring.',
+                    'The novel our English teacher recommended was inspiring.'
+                ],
+                sampleAnswer: 'The novel that our English teacher recommended was inspiring.',
+                hint: 'it 指代 The novel 作 recommended 的宾语，必须删掉 it，紧跟在 The novel 后面。',
+                mindMap: {
+                    antecedent: 'The novel (物)',
+                    role: '作 recommended 的宾语 (it → that / which / Ø)',
+                    placement: 'The novel [that our English teacher recommended] was inspiring.',
+                    trap: '千万不能在 recommended 后保留 it！'
+                }
+            },
+            {
+                id: 'kp3_q9',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 6',
+                prompt: '将下面两句话合并为一句（注意删掉多余的宾语 her）：',
+                sentences: ['The architect moved to Seattle.', 'We interviewed her last Friday.'],
+                accepted: [
+                    'The architect who we interviewed last Friday moved to Seattle.',
+                    'The architect whom we interviewed last Friday moved to Seattle.',
+                    'The architect that we interviewed last Friday moved to Seattle.',
+                    'The architect we interviewed last Friday moved to Seattle.'
+                ],
+                sampleAnswer: 'The architect whom we interviewed last Friday moved to Seattle.',
+                hint: 'her 指代 The architect 作 interviewed 的宾语，删掉 her，用 who / whom / that 或省略连接。',
+                mindMap: {
+                    antecedent: 'The architect (人)',
+                    role: '作 interviewed 的宾语 (her → who / whom / that / Ø)',
+                    placement: 'The architect [whom we interviewed last Friday] moved...',
+                    trap: '切勿保留 her（❌ whom we interviewed her last Friday）'
+                }
+            },
+            {
+                id: 'kp3_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 7',
+                prompt: '将下面两句话合并为一句（介词 to 可保留在句末，或提前写成 to whom）：',
+                sentences: ['The advisor was very patient.', 'I spoke to him after class.'],
+                accepted: [
+                    'The advisor who I spoke to after class was very patient.',
+                    'The advisor whom I spoke to after class was very patient.',
+                    'The advisor that I spoke to after class was very patient.',
+                    'The advisor I spoke to after class was very patient.',
+                    'The advisor to whom I spoke after class was very patient.'
+                ],
+                sampleAnswer: 'The advisor whom I spoke to after class was very patient.',
+                hint: 'him 指代 The advisor，删掉 him；介词 to 留在 spoke 后可用 who/whom/that/Ø，提前则用 to whom。',
+                mindMap: {
+                    antecedent: 'The advisor (人)',
+                    role: '作介词 to 的宾语',
+                    placement: '紧跟 The advisor 之后',
+                    trap: '若把 to 提前，只能写 to whom（绝不能写 to who 或 to that）'
+                }
             }
         ]
     },
@@ -548,6 +819,94 @@ const GRAMMAR_TOPICS = [
                     role: 'His father → whose father；The class → which',
                     placement: '两个从句分别紧跟 Jacob 和 biology class',
                     trap: 'Jacob 是专有名词，whose 从句前后需要逗号'
+                }
+            },
+            {
+                id: 'kp4_q6',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 7',
+                prompt: '选出唯一正确的选项（空格后紧跟光杆名词 roof）：',
+                sentence: 'They repaired the old barn ( ______ ) roof had leaked during the storm.',
+                options: ['which', 'whose', 'that', 'Ø'],
+                correctAnswers: ['whose'],
+                hint: 'roof 属于 the old barn（its roof → whose roof），whose 可以修饰物且绝不可省略！',
+                mindMap: {
+                    antecedent: 'the old barn (物)',
+                    role: 'its roof → whose roof',
+                    placement: 'whose + 名词 roof',
+                    trap: '不能用 which / that 直接加名词，也不能省略 whose'
+                }
+            },
+            {
+                id: 'kp4_q7',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 8',
+                prompt: '用 whose 将下面两句话合并为一句：',
+                sentences: ['I thanked the neighbor.', 'Her dog found my lost keys.'],
+                accepted: [
+                    'I thanked the neighbor whose dog found my lost keys.'
+                ],
+                sampleAnswer: 'I thanked the neighbor whose dog found my lost keys.',
+                hint: '把 Her dog 替换成 whose dog，紧跟在 the neighbor 后面。',
+                mindMap: {
+                    antecedent: 'the neighbor (人)',
+                    role: 'Her dog → whose dog（作从句主语）',
+                    placement: '紧接 the neighbor 之后',
+                    trap: '删掉 her，直接用 whose dog（不可写成 whose her dog）'
+                }
+            },
+            {
+                id: 'kp4_q8',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 9',
+                prompt: '用 whose 将下面两句话合并为一句（whose 修饰事物）：',
+                sentences: ['We read a magazine.', 'Its cover showed a solar eclipse.'],
+                accepted: [
+                    'We read a magazine whose cover showed a solar eclipse.'
+                ],
+                sampleAnswer: 'We read a magazine whose cover showed a solar eclipse.',
+                hint: 'Its cover → whose cover，直接接在 a magazine 后面。',
+                mindMap: {
+                    antecedent: 'a magazine (物)',
+                    role: 'Its cover → whose cover',
+                    placement: 'We read a magazine [whose cover showed a solar eclipse].',
+                    trap: 'whose 既可修饰人也可修饰物，不可改用 which cover'
+                }
+            },
+            {
+                id: 'kp4_q9',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 10',
+                prompt: '用 whose 将下面两句话合并为一句（注意 whose + 名词作从句宾语也不可省略）：',
+                sentences: ['The pianist bowed to the audience.', 'We admired his performance.'],
+                accepted: [
+                    'The pianist whose performance we admired bowed to the audience.'
+                ],
+                sampleAnswer: 'The pianist whose performance we admired bowed to the audience.',
+                hint: '把 his performance 变成 whose performance 提到从句最前面，紧跟 The pianist。',
+                mindMap: {
+                    antecedent: 'The pianist (人)',
+                    role: 'his performance → whose performance（作 admired 宾语）',
+                    placement: 'The pianist [whose performance we admired] bowed...',
+                    trap: 'whose performance 必须整体提前到 we admired 前面，且删掉 his'
+                }
+            },
+            {
+                id: 'kp4_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 11',
+                prompt: '用 whose 将下面两句话合并为一句（专有名词 Ms. Alvarez 需加逗号）：',
+                sentences: ['Ms. Alvarez teaches environmental science.', 'Her lab won a research grant.'],
+                accepted: [
+                    'Ms. Alvarez, whose lab won a research grant, teaches environmental science.'
+                ],
+                sampleAnswer: 'Ms. Alvarez, whose lab won a research grant, teaches environmental science.',
+                hint: 'Ms. Alvarez 是人名，用 `, whose lab won a research grant,` 插入主语和 teaches 之间。',
+                mindMap: {
+                    antecedent: 'Ms. Alvarez (专有名词 · 人)',
+                    role: 'Her lab → whose lab',
+                    placement: '专有名词后加双逗号：, whose lab won a research grant,',
+                    trap: '删掉 Her，并记得保留前后两个逗号'
                 }
             }
         ]
@@ -683,6 +1042,81 @@ const GRAMMAR_TOPICS = [
                     role: '地点状语 (there → where)',
                     placement: 'My driveway, [where I park four cars], is in front of my house.',
                     trap: '不要在句末保留 there（❌ where I park four cars there）'
+                }
+            },
+            {
+                id: 'kp5_q7',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 12',
+                prompt: '用 where 将下面两句话合并为一句（记得删掉句末的 there！）：',
+                sentences: ['The quiet cafe closed last month.', 'We used to study there every Sunday.'],
+                accepted: [
+                    'The quiet cafe where we used to study every Sunday closed last month.'
+                ],
+                sampleAnswer: 'The quiet cafe where we used to study every Sunday closed last month.',
+                hint: '用 where 替换 there，把 where we used to study every Sunday 紧插在 The quiet cafe 后面。',
+                mindMap: {
+                    antecedent: 'The quiet cafe (地点)',
+                    role: '地点状语 (there → where)',
+                    placement: 'The quiet cafe [where we used to study every Sunday] closed...',
+                    trap: '用 where 替换后必须删掉 there，绝不能写成 where ... study there'
+                }
+            },
+            {
+                id: 'kp5_q8',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 13',
+                prompt: '用 when（或 that / Ø）将下面两句话合并为一句（删掉 then）：',
+                sentences: ['I will never forget the summer.', 'I learned to sail then.'],
+                accepted: [
+                    'I will never forget the summer when I learned to sail.',
+                    'I will never forget the summer that I learned to sail.',
+                    'I will never forget the summer I learned to sail.'
+                ],
+                sampleAnswer: 'I will never forget the summer when I learned to sail.',
+                hint: 'the summer 是时间名词，用 when 替换句末的 then（删掉 then）。',
+                mindMap: {
+                    antecedent: 'the summer (时间)',
+                    role: '时间状语 (then → when / that / Ø)',
+                    placement: '直接紧跟 the summer 之后',
+                    trap: '记得删掉句末多余的 then，也不能单独用 which'
+                }
+            },
+            {
+                id: 'kp5_q9',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 14',
+                prompt: '小心“假地点”主语陷阱！用正确的关系词合并两句话：',
+                sentences: ['Kyoto is a historic city.', 'It attracts millions of travelers each year.'],
+                accepted: [
+                    'Kyoto is a historic city that attracts millions of travelers each year.',
+                    'Kyoto is a historic city which attracts millions of travelers each year.'
+                ],
+                sampleAnswer: 'Kyoto is a historic city that attracts millions of travelers each year.',
+                hint: 'It 在从句中作 attracts 的【主语】，不是地点状语！必须用 that 或 which，不能用 where！',
+                mindMap: {
+                    antecedent: 'a historic city (作从句主语)',
+                    role: 'It → that / which（主语位置）',
+                    placement: '紧跟 a historic city 之后',
+                    trap: '看到 city 别条件反射写 where！where 绝不能直接加动词 attracts'
+                }
+            },
+            {
+                id: 'kp5_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 15',
+                prompt: '用 where 将下面两句话合并为一句（专有名词 Northport Harbor 需加逗号）：',
+                sentences: ['Northport Harbor is famous for its lighthouse.', 'My grandfather worked there for thirty years.'],
+                accepted: [
+                    'Northport Harbor, where my grandfather worked for thirty years, is famous for its lighthouse.'
+                ],
+                sampleAnswer: 'Northport Harbor, where my grandfather worked for thirty years, is famous for its lighthouse.',
+                hint: 'Northport Harbor 是专有地名，用 `, where my grandfather worked for thirty years,` 插入主语后，并删掉 there。',
+                mindMap: {
+                    antecedent: 'Northport Harbor (专有地名)',
+                    role: '地点状语 (there → where)',
+                    placement: '专有地名后加双逗号：, where my grandfather worked for thirty years,',
+                    trap: '必须删掉句末的 there，且前后加逗号'
                 }
             }
         ]
@@ -820,6 +1254,78 @@ const GRAMMAR_TOPICS = [
                     role: '作从句主语 (It → which)',
                     placement: 'British Petroleum, [which is known as BP], received...',
                     trap: '专有名词非限定性从句必须用逗号 + which（不可用 that）'
+                }
+            },
+            {
+                id: 'kp6_q7',
+                type: 'multi',
+                sourceTag: 'Packet 4 · Extra Drill 8',
+                prompt: '选出唯一正确的选项（注意 Tokyo 后面的逗号）：',
+                sentence: 'We flew to Tokyo, ( ______ ) we stayed for five days.',
+                options: ['that', 'where', 'Ø', 'which'],
+                correctAnswers: ['where'],
+                hint: 'Tokyo 是专有地名且后面有逗号（非限定性），stayed there 需要地点状语，只能选 where！',
+                mindMap: {
+                    antecedent: 'Tokyo (专有地名 · 有逗号)',
+                    role: '地点状语 (stayed there)',
+                    placement: '逗号后非限定性地点从句',
+                    trap: '逗号后禁用 that 和 Ø；单独 which 缺少介词 in，唯一正确是 where'
+                }
+            },
+            {
+                id: 'kp6_q8',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 16',
+                prompt: '将下面两句话合并为一句（专有名词 Dr. Lin 需用逗号和非限定性 who）：',
+                sentences: ['Dr. Lin founded the robotics club.', 'She advises our senior team.'],
+                accepted: [
+                    'Dr. Lin, who advises our senior team, founded the robotics club.',
+                    'Dr. Lin, who founded the robotics club, advises our senior team.'
+                ],
+                sampleAnswer: 'Dr. Lin, who advises our senior team, founded the robotics club.',
+                hint: 'Dr. Lin 是人名（专有名词），加双逗号并用 who 替换 She（绝对不能用 that！）。',
+                mindMap: {
+                    antecedent: 'Dr. Lin (专有名词 · 人)',
+                    role: '作从句主语 (She → who)',
+                    placement: 'Dr. Lin, [who advises our senior team], founded...',
+                    trap: '有逗号时绝对禁用 that（❌ Dr. Lin, that advises...）'
+                }
+            },
+            {
+                id: 'kp6_q9',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 17',
+                prompt: '将下面两句话合并为一句（用 , which 指代前面整件事！）：',
+                sentences: ['The bus arrived thirty minutes late.', 'This caused us to miss the opening speech.'],
+                accepted: [
+                    'The bus arrived thirty minutes late, which caused us to miss the opening speech.'
+                ],
+                sampleAnswer: 'The bus arrived thirty minutes late, which caused us to miss the opening speech.',
+                hint: 'This 指代前面整句话，在逗号后面把 This 换成 which！',
+                mindMap: {
+                    antecedent: '前面整个分句 (The bus arrived thirty minutes late)',
+                    role: '指代整件事作主语 (This → , which)',
+                    placement: '紧跟前句逗号之后：, which caused us...',
+                    trap: '修饰整句话只能用 , which，绝不能用 , that 或 , what'
+                }
+            },
+            {
+                id: 'kp6_q10',
+                type: 'combine',
+                sourceTag: 'Packet 4 · Extra Combine 18',
+                prompt: '将下面两句话合并为一句（专有名词 Mount Fuji 需用逗号和 which）：',
+                sentences: ['Mount Fuji appears in many woodblock prints.', 'It rises above the surrounding plains.'],
+                accepted: [
+                    'Mount Fuji, which rises above the surrounding plains, appears in many woodblock prints.',
+                    'Mount Fuji, which appears in many woodblock prints, rises above the surrounding plains.'
+                ],
+                sampleAnswer: 'Mount Fuji, which rises above the surrounding plains, appears in many woodblock prints.',
+                hint: 'Mount Fuji 是独一无二的专有名词，用 `, which ... ,` 插入主语后（禁用 that）。',
+                mindMap: {
+                    antecedent: 'Mount Fuji (专有名词 · 物)',
+                    role: '作从句主语 (It → which)',
+                    placement: 'Mount Fuji, [which rises above the surrounding plains], appears...',
+                    trap: '逗号后面必须用 which，绝不能用 that'
                 }
             }
         ]

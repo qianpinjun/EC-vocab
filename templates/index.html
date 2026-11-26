@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261126a">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261126b">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -503,7 +503,7 @@ dialogue 对话，对白"></textarea>
                     <div class="panel-header">
                         <div class="header-left">
                             <h2>Packet 4 · Unit 14 定语从句 (Adjective Clauses)</h2>
-                            <p class="subtitle">选择一个知识点先看 Quick Reminder 微视频，再做 5–8 道双题型真题；错题将自动生成思维导图与视频讲解。</p>
+                            <p class="subtitle">6 大核心考点 × 60 道双题型真题：每个考点均区分「题型一 · 多项对比选择」与「题型二 · 合并写句」，错题自动生成思维导图、精讲视频与语法知识点。</p>
                         </div>
                     </div>
                     <div class="grammar-topics-grid" id="grammarTopicsGrid"></div>
@@ -514,18 +514,29 @@ dialogue 对话，对白"></textarea>
                     <div class="panel-header">
                         <div class="header-left">
                             <h2>Quick Reminder 微视频提醒</h2>
-                            <p class="subtitle">快速梳理该知识点的核心结构与“BE CAREFUL!”高频雷区</p>
+                            <p class="subtitle">看完微课后，可自由选择「专练题型一」「专练题型二」或「刷全部题型」</p>
                         </div>
                         <div class="header-right">
                             <button type="button" class="btn btn-secondary" id="btnGrammarBackFromVideo">
                                 <i class="fa-solid fa-arrow-left"></i> 返回知识点列表
                             </button>
-                            <button type="button" class="btn btn-primary" id="btnGrammarStartPractice">
-                                <i class="fa-solid fa-pen-to-square"></i> 进入练习题
-                            </button>
                         </div>
                     </div>
                     <div id="gQuickVideoMount"></div>
+                    <div class="g-video-launch-bar">
+                        <span class="g-video-launch-label">选择本考点刷题模式：</span>
+                        <div class="g-video-launch-btns">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnGrammarStartMulti">
+                                <i class="fa-solid fa-list-check"></i> 专练题型一 · 多选
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btnGrammarStartCombine">
+                                <i class="fa-solid fa-pen-nib"></i> 专练题型二 · 合句
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" id="btnGrammarStartPractice">
+                                <i class="fa-solid fa-layer-group"></i> 刷全部题型
+                            </button>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Grammar Practice Arena -->
@@ -1054,8 +1065,8 @@ dialogue 对话，对白"></textarea>
     <script src="/static/js/api.js?v=20261122c"></script>
     <script src="/static/js/vocab.js?v=20261121f"></script>
     <script src="/static/js/quiz.js?v=20261121f"></script>
-    <script src="/static/js/grammar_data.js?v=20261126a"></script>
-    <script src="/static/js/grammar.js?v=20261126a"></script>
+    <script src="/static/js/grammar_data.js?v=20261126b"></script>
+    <script src="/static/js/grammar.js?v=20261126b"></script>
     <script src="/static/js/leaderboard.js?v=20261121d"></script>
     <script src="/static/js/admin.js?v=20261121d"></script>
     <script src="/static/js/onboarding.js?v=20261126a"></script>

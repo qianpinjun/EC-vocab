@@ -3556,3 +3556,119 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
     align-items: center;
     gap: 0.4rem;
 }
+
+/* ==========================================================================
+   GRAMMAR KP QUESTION-TYPE SPLIT TRACKS (题型一 · 多选 vs 题型二 · 合句)
+   ========================================================================== */
+
+.g-type-split {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 0.25rem 0 0.35rem;
+}
+
+@media (max-width: 520px) {
+    .g-type-split {
+        grid-template-columns: 1fr;
+    }
+}
+
+.g-type-track {
+    appearance: none;
+    text-align: left;
+    background: #fbf9f4;
+    border: 1.5px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 0.65rem 0.78rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.22rem;
+    transition: all 0.16s ease;
+}
+
+.g-type-track.is-multi:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}
+
+.g-type-track.is-combine:hover {
+    background: #eef7f2;
+    border-color: var(--accent-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(27, 67, 50, 0.1);
+}
+
+.g-type-track-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.g-type-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.12rem 0.48rem;
+    border-radius: 999px;
+}
+
+.g-type-track.is-multi .g-type-pill {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.g-type-track.is-combine .g-type-pill {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.g-type-count {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.g-type-track-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 0.1rem;
+}
+
+.g-type-track-hint {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+}
+
+.g-video-launch-bar {
+    margin-top: 1rem;
+    padding: 0.9rem 1.15rem;
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.g-video-launch-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.g-video-launch-btns {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
