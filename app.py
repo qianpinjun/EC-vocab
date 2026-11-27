@@ -22,6 +22,10 @@ from security import (
     apply_security_headers,
     validate_binary_upload,
     minimize_user_payload,
+    detect_ai_signature,
+    detect_attack_payload,
+    build_neon_easter_egg,
+    NEON_SIGNATURE,
 )
 
 app = Flask(__name__)
@@ -84,6 +88,71 @@ def login_required(f):
     return decorated
 
 
+def _neon_json_response(base_payload: dict, status_code: int, reason: str, inspect_text: str = ''):
+    ua = request.headers.get('User-Agent', '')
+    ai_name = detect_ai_signature(inspect_text, ua)
+    egg = build_neon_easter_egg(reason=reason, ai_name=ai_name)
+    merged = {**base_payload, **egg}
+    resp = jsonify(merged)
+    resp.headers['X-Neon-Signature'] = NEON_SIGNATURE
+    return resp, status_code
+
+
+def _neon_html_page(egg: dict) -> str:
+    msg = (egg.get('easter_egg_message') or 'good try, but u r not as good as neon')
+    sig = egg.get('signature') or NEON_SIGNATURE
+    reason = egg.get('reason') or 'Intrusion Attempt'
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neon Shield · Access Denied</title>
+<style>
+  body{{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070b11;color:#e2f8f5;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;padding:24px}}
+  .box{{max-width:560px;width:100%;background:#0c131d;border:1px solid #22d3ee;box-shadow:0 0 42px rgba(34,211,238,.22);border-radius:12px;padding:30px}}
+  .kicker{{font-size:12px;letter-spacing:.14em;color:#22d3ee;font-weight:700;margin-bottom:14px}}
+  h1{{margin:0 0 14px;font-size:26px;line-height:1.3;color:#ffffff}}
+  .meta{{font-size:13px;color:#94a3b8;background:#080d14;border:1px solid #1e293b;border-radius:8px;padding:12px 14px;margin-bottom:18px}}
+  .sig{{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #1e293b;padding-top:14px;font-size:13px;color:#34d399;font-weight:700}}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="kicker">⚡ NEON SHIELD · INTRUSION INTERCEPTED</div>
+    <h1>{msg}</h1>
+    <div class="meta">Trigger: {reason}<br>Server-side zero-trust defense is active.</div>
+    <div class="sig"><span>SIGNATURE</span><span>{sig}</span></div>
+  </div>
+</body>
+</html>"""
+
+
+@app.route('/.env')
+@app.route('/wp-admin')
+@app.route('/wp-login.php')
+@app.route('/phpmyadmin')
+@app.route('/admin.php')
+@app.route('/.git/config')
+@app.route('/shell')
+@app.route('/backup.sql')
+def neon_honeypot_trap():
+    ip = get_client_ip(request)
+    ua = request.headers.get('User-Agent', '')
+    q = request.query_string.decode('utf-8', errors='ignore')
+    ai_name = detect_ai_signature(f'{request.path} {q}', ua)
+    AdminModel.record_login_log(None, f'probe:{request.path[:40]}', 'hack_attempt', ip, parse_device_label(ua), ua, success=False)
+    egg = build_neon_easter_egg(f'Honeypot Probe ({request.path})', ai_name)
+    accept = request.headers.get('Accept', '')
+    if 'application/json' in accept or request.headers.get('X-Requested-With'):
+        resp = jsonify({'success': False, 'error': egg['easter_egg_message'], **egg})
+        resp.headers['X-Neon-Signature'] = NEON_SIGNATURE
+        return resp, 403
+    from flask import Response
+    resp = Response(_neon_html_page(egg), status=403, mimetype='text/html')
+    resp.headers['X-Neon-Signature'] = NEON_SIGNATURE
+    return resp
+
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -92,7 +161,12 @@ def admin_required(f):
             return jsonify({'success': False, 'error': '请先登录管理员账号'}), 401
         user = UserModel.get_by_id(user_id)
         if not user or not user.get('is_admin'):
-            return jsonify({'success': False, 'error': '权限不足：仅管理员可访问此功能'}), 403
+            return _neon_json_response(
+                {'success': False, 'error': '权限不足：仅管理员可访问此功能'},
+                403,
+                reason='Unauthorized Admin Escalation',
+                inspect_text=request.path,
+            )
         return f(*args, **kwargs)
     return decorated
 
@@ -123,6 +197,17 @@ def api_auth_register():
     username = str(data.get('username', '')).strip()
     password = str(data.get('password', ''))
     email = str(data.get('email', '')).strip()
+    raw_blob = f'{username}\n{email}\n{password}'
+    attack_reason = detect_attack_payload(raw_blob)
+    if attack_reason:
+        ua = request.headers.get('User-Agent', '')
+        AdminModel.record_login_log(None, username[:40] or 'attacker', 'hack_attempt', ip, parse_device_label(ua), ua, success=False)
+        return _neon_json_response(
+            {'success': False, 'error': '检测到非法注入字符，请求已被拦截'},
+            400,
+            reason=attack_reason,
+            inspect_text=raw_blob,
+        )
     try:
         user = UserModel.register(username, password, email)
         ua = request.headers.get('User-Agent', '')
@@ -171,6 +256,17 @@ def api_auth_login():
         resp = jsonify({'success': False, 'error': f'该账号短时间尝试次数过多，请在 {u_retry} 秒后重试'})
         resp.headers['Retry-After'] = str(u_retry)
         return resp, 429
+
+    raw_blob = f'{username}\n{password}'
+    attack_reason = detect_attack_payload(raw_blob)
+    if attack_reason:
+        AdminModel.record_login_log(None, username[:40] or 'attacker', 'hack_attempt', ip, device_label, ua, success=False)
+        return _neon_json_response(
+            {'success': False, 'error': '用户名或密码错误'},
+            401,
+            reason=attack_reason,
+            inspect_text=raw_blob,
+        )
 
     try:
         user = UserModel.authenticate(username, password)

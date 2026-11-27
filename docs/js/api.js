@@ -171,6 +171,9 @@ async function edgeFetch(path, options = {}) {
     const res = await fetch(`${base}${path}`, { ...options, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+        if (data && data.neon_easter_egg && window.NeonShield) {
+            NeonShield.handleServerPayload(data);
+        }
         const isAuthRoute = path.startsWith('/auth/login') || path.startsWith('/auth/register');
         if (!isAuthRoute && (res.status === 401 || (res.status === 403 && String(data.error || '').includes('停用')))) {
             setEdgeToken(null);

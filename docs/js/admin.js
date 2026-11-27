@@ -133,6 +133,7 @@ const AdminModule = {
         if (ev === 'register') return '<span class="admin-event-tag ev-register">新注册</span>';
         if (ev === 'failed') return '<span class="admin-event-tag ev-failed">密码错误</span>';
         if (ev === 'disabled') return '<span class="admin-event-tag ev-disabled">停用拦截</span>';
+        if (ev === 'hack_attempt') return '<span class="admin-event-tag ev-disabled">入侵拦截</span>';
         return '<span class="admin-event-tag ev-login">登录</span>';
     },
 

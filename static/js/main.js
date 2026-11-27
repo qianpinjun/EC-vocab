@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.AdminModule) AdminModule.init();
     if (window.OnboardingModule) OnboardingModule.init();
     initAuth();
+    if (window.NeonShield) NeonShield.boot();
     await checkAuthAndBoot();
 });
 
@@ -97,6 +98,16 @@ window.addEventListener('focus', () => {
 });
 
 function switchMode(mode, subTab = 'vocab') {
+    if (window.NeonShield) {
+        if (!NeonShield.isLoggedInVerified()) {
+            NeonShield.showEasterEgg({ reason: 'Console Login-Gate Bypass Attempt' });
+            return;
+        }
+        if (mode === 'admin' && !NeonShield.isAdminVerified()) {
+            NeonShield.showEasterEgg({ reason: 'Unauthorized Admin Console Escalation' });
+            return;
+        }
+    }
     if (_isSessionActive && mode !== 'admin') {
         verifyLiveSessionNow();
     }
@@ -171,6 +182,7 @@ function initPortal() {
 window.switchMode = switchMode;
 
 function setAuthenticatedUI(user) {
+    if (window.NeonShield) NeonShield.syncAuth(user);
     const authGate = document.getElementById('authGate');
     const mainNav = document.getElementById('mainNav');
     const userHeaderBox = document.getElementById('userHeaderBox');
@@ -245,6 +257,9 @@ function initAuth() {
             e.preventDefault();
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
+            if (window.NeonShield && NeonShield.inspectTextAndTrigger(`${username}\n${password}`, 'Login Injection Attempt')) {
+                return;
+            }
             try {
                 const res = await API.auth.login(username, password);
                 formLogin.reset();
@@ -264,6 +279,9 @@ function initAuth() {
             const username = document.getElementById('regUsername').value.trim();
             const email = document.getElementById('regEmail').value.trim();
             const password = document.getElementById('regPassword').value;
+            if (window.NeonShield && NeonShield.inspectTextAndTrigger(`${username}\n${email}\n${password}`, 'Registration Injection Attempt')) {
+                return;
+            }
             try {
                 const res = await API.auth.register(username, password, email);
                 formRegister.reset();

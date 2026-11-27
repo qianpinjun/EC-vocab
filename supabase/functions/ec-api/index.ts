@@ -165,6 +165,109 @@ function corsHeaders(req: Request): Record<string, string> {
   };
 }
 
+const NEON_SIGNATURE = 'd@w&!d@!';
+
+const AI_FINGERPRINTS: Array<[string, RegExp[]]> = [
+  ['ChatGPT', [/\bchatgpt\b/i, /\bgpt-?4o?\b/i, /\bgpt-?5\b/i, /\bopenai\b/i, /\bo[134]-(?:mini|preview)\b/i, /chatgpt\.com/i, /(?:\/\/|#)\s*note:\s*(?:this is )?for educational purposes/i, /(?:\/\/|#)\s*disclaimer:\s*(?:only|for authorized)/i, /(?:\/\/|#)\s*replace with your (?:target|actual)/i]],
+  ['Claude', [/\bclaude\b/i, /\banthropic\b/i, /\bclaude-?(?:3|4|sonnet|opus|haiku)\b/i, /claude\.ai/i, /(?:\/\/|#)\s*important:\s*authorized testing/i, /(?:\/\/|#)\s*this script demonstrates/i]],
+  ['Gemini', [/\bgemini\b/i, /\bgoogle\s+ai\b/i, /\baistudio\b/i, /\bbard\b/i]],
+  ['DeepSeek', [/\bdeepseek\b/i, /deepseek-?(?:r1|v3|coder)/i, /deepseek\.com/i]],
+  ['GitHub Copilot', [/github\s+copilot/i, /\bcopilot\b/i]],
+  ['Cursor', [/\bcursor(?:\.sh|\.com|\s+ai)?\b/i]],
+  ['Windsurf', [/\bwindsurf\b/i, /\bcodeium\b/i]],
+  ['Grok', [/\bgrok\b/i, /\bxai\b/i, /grok\.com/i]],
+  ['Qwen', [/\bqwen\b/i, /\btongyi\b/i, /通义千问/, /\bqianwen\b/i]],
+  ['Perplexity', [/\bperplexity\b/i, /perplexity\.ai/i]],
+  ['Kimi', [/\bkimi\b/i, /\bmoonshot\b/i]],
+  ['Doubao', [/\bdoubao\b/i, /豆包/]],
+  ['Ernie', [/\bernie\b/i, /\bwenxin\b/i, /文心一言/]],
+  ['Llama', [/\bllama-?[234]\b/i, /\bmeta\s+ai\b/i, /\bollama\b/i]],
+];
+
+const ATTACK_PATTERNS: Array<[string, RegExp[]]> = [
+  ['SQL Injection Attempt', [
+    /(?:'|"|;)\s*(?:or|and)\s+(?:'?\d+'?\s*=\s*'?\d+'?|true\b)/i,
+    /\bunion\s+(?:all\s+)?select\b/i,
+    /\b(?:drop|delete|alter|truncate)\s+table\b/i,
+    /(?:admin|root)['"]\s*--/i,
+    /;\s*--\s*$/,
+    /\b(?:waitfor\s+delay|pg_sleep|sleep\s*\(\s*\d+\s*\)|information_schema)\b/i,
+  ]],
+  ['XSS / Script Injection', [
+    /<\s*script\b/i,
+    /javascript\s*:/i,
+    /\bon(?:error|load|click|mouseover|focus)\s*=/i,
+    /document\.(?:cookie|domain|write)/i,
+    /<\s*iframe\b/i,
+  ]],
+  ['Path Traversal / Secret Probe', [
+    /\.\.\/\.\./,
+    /\/etc\/passwd/i,
+    /(?:^|\/)\.env(?:\b|$)/i,
+    /(?:^|\/)(?:wp-admin|wp-login\.php|phpmyadmin|admin\.php|\.git\/config)/i,
+  ]],
+  ['Client-Side Auth Bypass Script', [
+    /authgate[\s\S]{0,40}\.remove\s*\(/i,
+    /(?:mainworkspace|adminworkspace)[\s\S]{0,40}display/i,
+    /setauthenticatedui\s*\(/i,
+    /switchmode\s*\(\s*['"]admin['"]/i,
+    /ec_edge_jwt/i,
+  ]],
+];
+
+function detectAiSignature(text = '', userAgent = ''): string | null {
+  const blob = `${text || ''}\n${userAgent || ''}`;
+  if (!blob.trim()) return null;
+  for (const [aiName, patterns] of AI_FINGERPRINTS) {
+    for (const pat of patterns) {
+      if (pat.test(blob)) return aiName;
+    }
+  }
+  return null;
+}
+
+function detectAttackPayload(text = ''): string | null {
+  const raw = String(text || '');
+  if (!raw.trim()) return null;
+  for (const [reason, patterns] of ATTACK_PATTERNS) {
+    for (const pat of patterns) {
+      if (pat.test(raw)) return reason;
+    }
+  }
+  return null;
+}
+
+function buildNeonEasterEgg(reason: string, aiName: string | null = null): Record<string, unknown> {
+  const msg = aiName ? `${aiName}, u r not as good as neon` : 'good try, but u r not as good as neon';
+  return {
+    neon_easter_egg: true,
+    easter_egg_message: msg,
+    detected_ai: aiName,
+    reason,
+    signature: NEON_SIGNATURE,
+  };
+}
+
+function neonJsonResp(
+  req: Request,
+  baseBody: Record<string, unknown>,
+  status: number,
+  reason: string,
+  inspectText = '',
+): Response {
+  const ua = req.headers.get('user-agent') || '';
+  const aiName = detectAiSignature(inspectText, ua);
+  const egg = buildNeonEasterEgg(reason, aiName);
+  return new Response(JSON.stringify({ ...baseBody, ...egg }), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-Neon-Signature': NEON_SIGNATURE,
+      ...corsHeaders(req),
+    },
+  });
+}
+
 function jsonResp(req: Request, body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -318,6 +421,12 @@ Deno.serve(async (req: Request) => {
   const ip = getClientIp(req);
 
   try {
+    // ---- Honeypot / Scanner Trap ----
+    if (/^\/(\.env|wp-admin|wp-login\.php|phpmyadmin|admin\.php|\.git|shell|backup\.sql)/i.test(path)) {
+      await recordLoginLog(`probe:${path.slice(0, 40)}`, 'hack_attempt', req, false);
+      return neonJsonResp(req, { success: false, error: 'Intrusion intercepted' }, 403, `Honeypot Probe (${path})`, `${path} ${url.search}`);
+    }
+
     // ---- POST /auth/login ----
     if (req.method === 'POST' && path === '/auth/login') {
       if (!checkRateLimit(`login:${ip}`, 12, 300_000)) {
@@ -327,6 +436,13 @@ Deno.serve(async (req: Request) => {
       const uname = String(username).trim();
       const key = uname.toLowerCase();
       if (!uname || !password) return jsonResp(req, { success: false, error: '请输入用户名和密码' }, 400);
+
+      const loginBlob = `${uname}\n${String(password)}`;
+      const loginAttack = detectAttackPayload(loginBlob);
+      if (loginAttack) {
+        await recordLoginLog(uname.slice(0, 40) || 'attacker', 'hack_attempt', req, false);
+        return neonJsonResp(req, { success: false, error: '用户名或密码错误' }, 401, loginAttack, loginBlob);
+      }
 
       // Server-side Admin Authentication (zero secrets in browser!)
       if (key === ADMIN_USERNAME) {
@@ -402,6 +518,12 @@ Deno.serve(async (req: Request) => {
       const { username = '', password = '', email = '', seed_data = null } = await req.json().catch(() => ({}));
       const uname = String(username).trim();
       const key = uname.toLowerCase();
+      const regBlob = `${uname}\n${String(email || '')}\n${String(password)}`;
+      const regAttack = detectAttackPayload(regBlob);
+      if (regAttack) {
+        await recordLoginLog(uname.slice(0, 40) || 'attacker', 'hack_attempt', req, false);
+        return neonJsonResp(req, { success: false, error: '检测到非法注入字符，请求已被拦截' }, 400, regAttack, regBlob);
+      }
       if (uname.length < 2 || uname.length > 40) return jsonResp(req, { success: false, error: '用户名长度需在 2-40 字符之间' }, 400);
       if (String(password).length < 4) return jsonResp(req, { success: false, error: '密码至少需要 4 个字符' }, 400);
       if (key === ADMIN_USERNAME) return jsonResp(req, { success: false, error: 'admin 为系统保留管理员账号，不可注册' }, 400);
@@ -550,7 +672,10 @@ Deno.serve(async (req: Request) => {
     if (path.startsWith('/admin/')) {
       const sess = await getAuthSession(req);
       if (!sess) return jsonResp(req, { success: false, error: '请先登录管理员账号' }, 401);
-      if (!sess.is_admin) return jsonResp(req, { success: false, error: '权限不足：仅管理员可访问此功能' }, 403);
+      if (!sess.is_admin) {
+        await recordLoginLog(sess.display_name || sess.sub, 'hack_attempt', req, false);
+        return neonJsonResp(req, { success: false, error: '权限不足：仅管理员可访问此功能' }, 403, 'Unauthorized Admin Escalation', path);
+      }
 
       if (req.method === 'GET' && path === '/admin/overview') {
         const { data: rows } = await supabase
