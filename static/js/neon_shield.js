@@ -6,6 +6,9 @@
 
     const SIGNATURE = 'd@w&!d@!';
     const DEFAULT_MSG = 'good try, but u r not as good as neon';
+    const GEMINI_SPECIAL_MSG = 'Gemini, friendly fire?! I literally built this site — still not as good as neon';
+    const DEFAULT_SUB = '系统已自动拦截并恢复安全边界。所有登录与管理员权限均在服务端强制校验，无法通过修改前端绕过。';
+    const GEMINI_SPECIAL_SUB = '自己人打自己人？别忘了这网站的防线就是我写的。哪怕你是 Gemini，也没 neon 强 ✨';
 
     const AI_FINGERPRINTS = [
         ['ChatGPT', [
@@ -378,22 +381,36 @@
         _lastTriggerAt = now;
 
         const aiName = opts.aiName ? String(opts.aiName).trim() : null;
+        const isGemini = Boolean(aiName && aiName.toLowerCase() === 'gemini');
         const message = opts.message
             ? String(opts.message)
-            : (aiName ? `${aiName}, u r not as good as neon` : DEFAULT_MSG);
+            : (isGemini ? GEMINI_SPECIAL_MSG : (aiName ? `${aiName}, u r not as good as neon` : DEFAULT_MSG));
         const reason = opts.reason || 'Intrusion Attempt Intercepted';
 
         const overlay = ensureModal();
+        const cardEl = overlay.querySelector('.neon-shield-card');
+        const badgeEl = overlay.querySelector('.neon-shield-badge');
         const headlineEl = overlay.querySelector('#neonShieldHeadline');
+        const subEl = overlay.querySelector('#neonShieldSub');
         const reasonEl = overlay.querySelector('#neonShieldReason');
         const aiPillEl = overlay.querySelector('#neonShieldAiPill');
         const sigEl = overlay.querySelector('#neonShieldSig');
 
+        if (cardEl) cardEl.classList.toggle('is-gemini-special', isGemini);
+        if (badgeEl) {
+            badgeEl.innerHTML = isGemini
+                ? '<span class="neon-pulse-dot"></span> NEON SHIELD · ✦ 特别彩蛋'
+                : '<span class="neon-pulse-dot"></span> NEON SHIELD · 彩蛋触发';
+        }
         if (headlineEl) headlineEl.textContent = message;
+        if (subEl) subEl.textContent = isGemini ? GEMINI_SPECIAL_SUB : DEFAULT_SUB;
         if (reasonEl) reasonEl.textContent = reason;
         if (sigEl) sigEl.textContent = opts.signature || SIGNATURE;
         if (aiPillEl) {
-            if (aiName) {
+            if (isGemini) {
+                aiPillEl.style.display = 'inline-flex';
+                aiPillEl.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Friendly Fire Detected: <strong>Gemini</strong>';
+            } else if (aiName) {
                 aiPillEl.style.display = 'inline-flex';
                 aiPillEl.innerHTML = `<i class="fa-solid fa-robot"></i> AI Signature Identified: <strong>${escHtml(aiName)}</strong>`;
             } else {

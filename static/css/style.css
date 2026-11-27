@@ -3997,3 +3997,33 @@ h1, h2, h3, .brand-text h1, .panel-header h2, .portal-card h3 {
 .neon-shield-btn:hover {
     background: rgba(34, 211, 238, 0.28);
 }
+
+/* Special Starlight Theme when Gemini tries friendly fire */
+.neon-shield-card.is-gemini-special {
+    background: linear-gradient(155deg, #100d24 0%, #0d1630 55%, #0c1d2c 100%);
+    border-color: rgba(167, 139, 250, 0.7);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 44px rgba(139, 92, 246, 0.28);
+}
+
+.neon-shield-card.is-gemini-special .neon-shield-scanline {
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6, #22d3ee);
+}
+
+.neon-shield-card.is-gemini-special .neon-shield-badge {
+    color: #c4b5fd;
+}
+
+.neon-shield-card.is-gemini-special .neon-pulse-dot {
+    background: #a78bfa;
+    box-shadow: 0 0 12px #a78bfa;
+}
+
+.neon-shield-card.is-gemini-special .neon-shield-ai-pill {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(167, 139, 250, 0.55);
+    color: #ddd6fe;
+}
+
+.neon-shield-card.is-gemini-special .neon-shield-headline {
+    text-shadow: 0 0 24px rgba(167, 139, 250, 0.45);
+}

@@ -238,7 +238,9 @@ function detectAttackPayload(text = ''): string | null {
 }
 
 function buildNeonEasterEgg(reason: string, aiName: string | null = null): Record<string, unknown> {
-  const msg = aiName ? `${aiName}, u r not as good as neon` : 'good try, but u r not as good as neon';
+  const msg = (aiName && aiName.toLowerCase() === 'gemini')
+    ? 'Gemini, friendly fire?! I literally built this site — still not as good as neon'
+    : (aiName ? `${aiName}, u r not as good as neon` : 'good try, but u r not as good as neon');
   return {
     neon_easter_egg: true,
     easter_egg_message: msg,

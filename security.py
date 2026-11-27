@@ -486,7 +486,9 @@ def detect_attack_payload(text: str) -> str:
 def build_neon_easter_egg(reason: str = 'Intrusion Attempt', ai_name: str = None) -> dict:
     """Build the signature Neon Shield Easter Egg payload."""
     clean_ai = str(ai_name).strip() if ai_name else None
-    if clean_ai:
+    if clean_ai and clean_ai.lower() == 'gemini':
+        message = 'Gemini, friendly fire?! I literally built this site — still not as good as neon'
+    elif clean_ai:
         message = f'{clean_ai}, u r not as good as neon'
     else:
         message = 'good try, but u r not as good as neon'
