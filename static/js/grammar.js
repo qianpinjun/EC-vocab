@@ -234,7 +234,7 @@ const GrammarVideoPlayer = {
 
         // Try loading pre-rendered kinetic 24fps MP4 video first (only if pre-rendered, avoiding 404 noise)
         if (videoId && PRE_RENDERED_VIDEO_IDS.has(videoId) && realVideo && realWrap) {
-            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=4`;
+            const mp4Url = `${this.getVideoBasePath()}/${encodeURIComponent(videoId)}.mp4?v=5`;
             if (fallbackWrap) fallbackWrap.style.display = 'none';
             if (dotsWrap) dotsWrap.style.display = 'none';
             if (stepCounter) stepCounter.textContent = '24fps MP4 · AI 语音';
