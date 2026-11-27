@@ -31,7 +31,7 @@ const GRAMMAR_TOPICS = [
                 highlightPronoun: 'who',
                 resultSentence: '注意：修饰主语时，从句夹在主语和主句谓语动词之间！',
                 cnTip: '常见错误：把从句放到句尾 → ❌ The woman is a writer who teaches psychology.',
-                rulePill: '修饰谁，就紧跟在谁的屁股后面'
+                rulePill: '修饰谁，就紧跟在谁的后面'
             },
             {
                 duration: 4000,
@@ -55,7 +55,9 @@ const GRAMMAR_TOPICS = [
                 sentences: ['The professor emailed me.', 'He teaches Russian.'],
                 accepted: [
                     'The professor who teaches Russian emailed me.',
-                    'The professor that teaches Russian emailed me.'
+                    'The professor that teaches Russian emailed me.',
+                    'The professor who emailed me teaches Russian.',
+                    'The professor that emailed me teaches Russian.'
                 ],
                 sampleAnswer: 'The professor who teaches Russian emailed me.',
                 hint: '“He” 指代 “The professor”，所以定语从句要紧跟在 “The professor” 后面。',
@@ -116,7 +118,9 @@ const GRAMMAR_TOPICS = [
                 sentences: ['The child went home.', 'He was sick.'],
                 accepted: [
                     'The child who was sick went home.',
-                    'The child that was sick went home.'
+                    'The child that was sick went home.',
+                    'The child who went home was sick.',
+                    'The child that went home was sick.'
                 ],
                 sampleAnswer: 'The child who was sick went home.',
                 hint: '“He” 指代 “The child”，从句紧跟 The child。',
@@ -255,7 +259,9 @@ const GRAMMAR_TOPICS = [
                 sentences: ['The scientist won a national prize.', 'She discovered the new vaccine.'],
                 accepted: [
                     'The scientist who discovered the new vaccine won a national prize.',
-                    'The scientist that discovered the new vaccine won a national prize.'
+                    'The scientist that discovered the new vaccine won a national prize.',
+                    'The scientist who won a national prize discovered the new vaccine.',
+                    'The scientist that won a national prize discovered the new vaccine.'
                 ],
                 sampleAnswer: 'The scientist who discovered the new vaccine won a national prize.',
                 hint: 'She 指代 The scientist，将 who/that discovered the new vaccine 紧插在 The scientist 后面。',
@@ -360,9 +366,9 @@ const GRAMMAR_TOPICS = [
                 correctAnswers: ['likes'],
                 hint: '看清楚从句里的主语是谁！不是 Lions，也不是 animals，而是 Lea！',
                 mindMap: {
-                    antecedent: 'the animals (作 liked 的宾语)',
+                    antecedent: 'the animals (作 likes 的宾语)',
                     role: 'that 作从句宾语，从句真正的主语是 Lea (第三人称单数)',
-                    placement: '主谓一致看从句主语 Lea',
+                    placement: '主谓一致看从句主语 Lea（而非前面的复数 animals）',
                     trap: '不要被前面的复数 Lions / animals 迷惑而误选 like'
                 }
             },
@@ -374,7 +380,9 @@ const GRAMMAR_TOPICS = [
                 sentences: ['I picked up the package.', 'It was lying on the front step.'],
                 accepted: [
                     'I picked up the package that was lying on the front step.',
-                    'I picked up the package which was lying on the front step.'
+                    'I picked up the package which was lying on the front step.',
+                    'The package that I picked up was lying on the front step.',
+                    'The package which I picked up was lying on the front step.'
                 ],
                 sampleAnswer: 'I picked up the package that was lying on the front step.',
                 hint: 'package 是物，用 that 或 which 替换 It。',
@@ -590,7 +598,9 @@ const GRAMMAR_TOPICS = [
                 accepted: [
                     'The dress that Mary wore was long, black, and beautiful.',
                     'The dress which Mary wore was long, black, and beautiful.',
-                    'The dress Mary wore was long, black, and beautiful.'
+                    'The dress Mary wore was long, black, and beautiful.',
+                    'Mary wore the dress that was long, black, and beautiful.',
+                    'Mary wore the dress which was long, black, and beautiful.'
                 ],
                 sampleAnswer: 'The dress that Mary wore was long, black, and beautiful.',
                 hint: 'it 指代 The dress，在 Mary wore it 中作宾语。记住删掉 it！',
@@ -808,17 +818,15 @@ const GRAMMAR_TOPICS = [
                     'The class meets twice a week.'
                 ],
                 accepted: [
-                    'Jacob, whose father is the ambassador from Kenya, is a student in my biology class, which meets twice a week.',
-                    'Jacob, whose father is the ambassador from Kenya, is a student in my biology class that meets twice a week.',
-                    'Jacob, whose father is the ambassador from Kenya, is a student in my biology class which meets twice a week.'
+                    'Jacob, whose father is the ambassador from Kenya, is a student in my biology class, which meets twice a week.'
                 ],
                 sampleAnswer: 'Jacob, whose father is the ambassador from Kenya, is a student in my biology class, which meets twice a week.',
-                hint: 'His father → whose father（修饰 Jacob，专有名词需加逗号）；The class → which meets...（修饰 biology class）。',
+                hint: 'His father → whose father（修饰专有名词 Jacob，前后需加逗号）；The class → , which meets twice a week（非限定性从句需加逗号并用 which）。',
                 mindMap: {
-                    antecedent: 'Jacob (专有名词) + my biology class',
-                    role: 'His father → whose father；The class → which',
-                    placement: '两个从句分别紧跟 Jacob 和 biology class',
-                    trap: 'Jacob 是专有名词，whose 从句前后需要逗号'
+                    antecedent: 'Jacob (专有名词) + my biology class (特指)',
+                    role: 'His father → whose father；The class → , which',
+                    placement: '两个非限定性从句分别用逗号紧跟 Jacob 和 my biology class',
+                    trap: 'Jacob 是专有名词且 my biology class 为特定课程，两处从句均需逗号，逗号后禁用 that'
                 }
             },
             {
@@ -1125,7 +1133,7 @@ const GRAMMAR_TOPICS = [
         id: 'kp6_commas',
         number: '06',
         title: '限定 vs 非限定从句 (Commas & Traps)',
-        subtitle: '有逗号（非限定）的三大禁区：禁用 that、禁用 Ø、不可用 which 指人',
+        subtitle: '有逗号（非限定）的核心铁律：禁用 that、禁用省略 (Ø)；修饰整句话必用 , which',
         badge: '核心区分',
         summary: 'Identifying clauses (no commas) narrow down which noun you mean. Nonidentifying clauses (with commas) add extra info about an already-specific noun — you CANNOT use "that" or omit the pronoun (Ø).',
         videoScenes: [
@@ -1226,8 +1234,7 @@ const GRAMMAR_TOPICS = [
                 prompt: '将下面两句话合并为一句（专有名词 The Industrial Revolution 需用非限定性逗号）：',
                 sentences: ['The Industrial Revolution changed the way people make things.', 'It began in England.'],
                 accepted: [
-                    'The Industrial Revolution, which began in England, changed the way people make things.',
-                    'The Industrial Revolution that began in England changed the way people make things.'
+                    'The Industrial Revolution, which began in England, changed the way people make things.'
                 ],
                 sampleAnswer: 'The Industrial Revolution, which began in England, changed the way people make things.',
                 hint: '工业革命是独一无二的专有名词，用 `, which began in England,` 插入在主语后面。',
@@ -1245,7 +1252,8 @@ const GRAMMAR_TOPICS = [
                 prompt: '将下面两句话合并为一句（注意 British Petroleum 是专有公司名，需要逗号和 which）：',
                 sentences: ['British Petroleum received criticism because of the oil spill in the Gulf.', 'It is known as BP.'],
                 accepted: [
-                    'British Petroleum, which is known as BP, received criticism because of the oil spill in the Gulf.'
+                    'British Petroleum, which is known as BP, received criticism because of the oil spill in the Gulf.',
+                    'British Petroleum, which received criticism because of the oil spill in the Gulf, is known as BP.'
                 ],
                 sampleAnswer: 'British Petroleum, which is known as BP, received criticism because of the oil spill in the Gulf.',
                 hint: 'British Petroleum 是特定公司名，用 `, which is known as BP,` 紧跟在它后面。',

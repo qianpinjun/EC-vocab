@@ -517,8 +517,8 @@ function gradeCombinedSentence(userRaw, question) {
     if (/\b(who|which|that)\s+(he|she|it|they)\b/.test(userNorm)) {
         return { isCorrect: false, diagnosis: '犯了“双主语”错误！关系代词 (who/which/that) 已经替代了主语，不能再保留 he/she/it/they。' };
     }
-    if (/\b(whom|which|that|who)\b.*\b(him|her|it|them|there)\s*$/.test(userNorm)) {
-        return { isCorrect: false, diagnosis: '句末保留了多余的代词 (him/it/there)，用关系词替换后必须把原句里的重复代词删掉。' };
+    if (/\b(whom|which|that|who|where|when)\b.*\b(him|her|it|them|there|then)(?=\s*[,.;]|\s*$)/.test(userNorm)) {
+        return { isCorrect: false, diagnosis: '从句中保留了多余的重复代词/副词 (him / her / it / them / there / then)，用关系词替换后必须将其删除。' };
     }
     const allowsOmission = acceptedList.some(a => !/\b(who|whom|whose|which|that|where|when)\b/.test(a));
     if (!/\b(who|whom|whose|which|that|where|when)\b/.test(userNorm) && !allowsOmission) {
