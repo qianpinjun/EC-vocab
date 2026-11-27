@@ -152,8 +152,14 @@ function maskEmail(email: string): string {
 }
 
 function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') || '*';
-  const allow = ALLOWED_ORIGIN === '*' ? origin : ALLOWED_ORIGIN;
+  const reqOrigin = (req.headers.get('origin') || '').trim();
+  const configured = ALLOWED_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
+  let allow = 'https://qianpinjun.github.io';
+  if (configured.includes('*')) {
+    allow = reqOrigin || '*';
+  } else if (configured.length > 0) {
+    allow = configured.includes(reqOrigin) ? reqOrigin : configured[0];
+  }
   return {
     'Access-Control-Allow-Origin': allow,
     'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
@@ -163,6 +169,169 @@ function corsHeaders(req: Request): Record<string, string> {
     'X-Frame-Options': 'DENY',
     'Cache-Control': 'no-store',
   };
+}
+
+const MAX_SYNC_PAYLOAD_BYTES = 512 * 1024; // 512 KB hard cap per user sync/register payload
+
+async function checkDbBruteForceLockout(ip: string, usernameKey: string): Promise<{ blocked: boolean; reason: string }> {
+  const cutoffIso = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  try {
+    // 1. Per-IP failed login cap across ALL edge isolates (15 failed attempts / 10 min)
+    if (ip && ip !== 'unknown') {
+      const { count: ipFails } = await supabase
+        .from('ec_login_logs')
+        .select('id', { count: 'exact', head: true })
+        .eq('ip_address', ip)
+        .eq('success', false)
+        .gte('created_at', cutoffIso);
+      if ((ipFails ?? 0) >= 15) {
+        return { blocked: true, reason: '当前网络登录失败次数过多，已触发 10 分钟安全锁定' };
+      }
+    }
+    // 2. Per-account failed login cap across ALL IPs & isolates (8 failed attempts / 10 min)
+    if (usernameKey) {
+      const { count: userFails } = await supabase
+        .from('ec_login_logs')
+        .select('id', { count: 'exact', head: true })
+        .ilike('username', usernameKey)
+        .eq('success', false)
+        .gte('created_at', cutoffIso);
+      if ((userFails ?? 0) >= 8) {
+        return { blocked: true, reason: '该账号短时间内密码错误过多，已触发 10 分钟安全保护' };
+      }
+    }
+  } catch {
+    // Fallback gracefully to in-isolate rateBuckets if DB query fails
+  }
+  return { blocked: false, reason: '' };
+}
+
+function sanitizeFreshSeedData(seedData: unknown): Record<string, unknown> {
+  const src = (seedData && typeof seedData === 'object') ? (seedData as Record<string, unknown>) : {};
+  const lists = Array.isArray(src.lists) ? src.lists.slice(0, 60) : [];
+  const rawWords = Array.isArray(src.words) ? src.words.slice(0, 1500) : [];
+  // Force zeroed initial progress so a newly registered account can NEVER inject fake leaderboard scores
+  const words = rawWords.map((w: any) => ({
+    id: Number(w?.id) || 0,
+    list_id: Number(w?.list_id) || 0,
+    word: String(w?.word || '').slice(0, 80),
+    phonetic: String(w?.phonetic || '').slice(0, 80),
+    meaning: String(w?.meaning || '').slice(0, 240),
+    example_en: String(w?.example_en || '').slice(0, 500),
+    example_cn: String(w?.example_cn || '').slice(0, 500),
+    wrong_count: 0,
+    correct_count: 0,
+    mastered: 0,
+  }));
+  return {
+    lists,
+    words,
+    stats: {
+      vocab_reviewed: 0,
+      vocab_correct: 0,
+      grammar_completed: 0,
+      grammar_correct: 0,
+      grammar_unique_ids: [],
+      seed_scrubbed_v1: true,
+    },
+    disabled: false,
+  };
+}
+
+function validateAndSanitizeSyncStore(
+  incoming: Record<string, unknown>,
+  prevData: Record<string, unknown> | null | undefined,
+  prevUpdatedAt: string | null | undefined,
+): { ok: boolean; cheatReason?: string; sanitized?: Record<string, unknown> } {
+  const prev = (prevData && typeof prevData === 'object') ? prevData : {};
+  const prevStats = (prev.stats && typeof prev.stats === 'object') ? (prev.stats as Record<string, any>) : {};
+  const prevWords = Array.isArray(prev.words) ? prev.words : [];
+
+  const lists = Array.isArray(incoming.lists) ? incoming.lists : [];
+  const words = Array.isArray(incoming.words) ? incoming.words : [];
+  if (lists.length > 100 || words.length > 2000) {
+    return { ok: false, cheatReason: 'Sync Payload Limit Exceeded' };
+  }
+
+  const inStats = (incoming.stats && typeof incoming.stats === 'object') ? (incoming.stats as Record<string, any>) : {};
+  const numFields = ['vocab_reviewed', 'vocab_correct', 'grammar_completed', 'grammar_correct'];
+  for (const f of numFields) {
+    const raw = inStats[f];
+    if (raw !== undefined && (!Number.isFinite(Number(raw)) || Number(raw) < 0 || Number(raw) > 50000)) {
+      return { ok: false, cheatReason: `Leaderboard Score Tampering (Invalid ${f})` };
+    }
+  }
+
+  const vr = Math.max(0, Math.floor(Number(inStats.vocab_reviewed || 0)));
+  const vc = Math.max(0, Math.floor(Number(inStats.vocab_correct || 0)));
+  const gc = Math.max(0, Math.floor(Number(inStats.grammar_completed || 0)));
+  const gok = Math.max(0, Math.floor(Number(inStats.grammar_correct || 0)));
+
+  if (vc > vr || gok > gc) {
+    return { ok: false, cheatReason: 'Leaderboard Score Tampering (Correct > Total)' };
+  }
+
+  const rawUniq = Array.isArray(inStats.grammar_unique_ids) ? inStats.grammar_unique_ids : [];
+  const validUniq = Array.from(
+    new Set(rawUniq.map((x: unknown) => String(x || '').trim()).filter((id: string) => /^kp[1-6]_q\d{1,2}$/i.test(id))),
+  ).slice(0, 60);
+  if (rawUniq.length > 80) {
+    return { ok: false, cheatReason: 'Leaderboard Score Tampering (Forged Grammar IDs)' };
+  }
+
+  // Validate per-word counts & mastered delta against previous DB snapshot
+  let wordAtt = 0;
+  let wordOk = 0;
+  const masteredNow = new Set<string>();
+  for (const w of words as any[]) {
+    const wc = Number(w?.correct_count || 0);
+    const ww = Number(w?.wrong_count || 0);
+    if (!Number.isFinite(wc) || !Number.isFinite(ww) || wc < 0 || ww < 0 || wc > 5000 || ww > 5000) {
+      return { ok: false, cheatReason: 'Leaderboard Score Tampering (Forged Word Counter)' };
+    }
+    wordAtt += Math.floor(wc) + Math.floor(ww);
+    wordOk += Math.floor(wc);
+    if (w?.mastered) masteredNow.add(String(w?.word || '').toLowerCase());
+  }
+
+  const prevWordAtt = prevWords.reduce((a: number, w: any) => a + Number(w?.correct_count || 0) + Number(w?.wrong_count || 0), 0);
+  const prevMastered = new Set(prevWords.filter((w: any) => w?.mastered).map((w: any) => String(w?.word || '').toLowerCase())).size;
+
+  const prevVr = Math.max(Number(prevStats.vocab_reviewed || 0), prevWordAtt);
+  const prevGc = Number(prevStats.grammar_completed || 0);
+
+  const deltaVr = Math.max(vr, wordAtt) - prevVr;
+  const deltaGc = gc - prevGc;
+  const deltaMastered = masteredNow.size - prevMastered;
+
+  const elapsedSec = prevUpdatedAt ? Math.max(0, (Date.now() - Date.parse(prevUpdatedAt)) / 1000) : 9999;
+
+  // Hard anti-cheat ceilings per single sync & high-velocity bursts
+  if (deltaVr > 60 || deltaGc > 45 || deltaMastered > 35) {
+    return { ok: false, cheatReason: 'Leaderboard Score Tampering (Impossible Single-Sync Jump)' };
+  }
+  if (elapsedSec < 45 && (deltaVr > 25 || deltaGc > 20 || deltaMastered > 18)) {
+    return { ok: false, cheatReason: 'Leaderboard Score Tampering (Superhuman Speed Burst)' };
+  }
+
+  const sanitized: Record<string, unknown> = {
+    ...incoming,
+    lists,
+    words,
+    stats: {
+      ...inStats,
+      vocab_reviewed: vr,
+      vocab_correct: Math.min(vc, vr),
+      grammar_completed: gc,
+      grammar_correct: Math.min(gok, gc),
+      grammar_unique_ids: validUniq,
+      last_active_at: new Date().toISOString(),
+    },
+    disabled: false,
+  };
+  if (prev.last_login) sanitized.last_login = prev.last_login;
+  if (Array.isArray(prev.login_history)) sanitized.login_history = prev.login_history;
+  return { ok: true, sanitized };
 }
 
 const NEON_SIGNATURE = 'd@w&!d@!';
@@ -446,6 +615,12 @@ Deno.serve(async (req: Request) => {
         return neonJsonResp(req, { success: false, error: '用户名或密码错误' }, 401, loginAttack, loginBlob);
       }
 
+      // Persistent DB-backed brute-force lockout across all Edge isolates & cold starts
+      const dbLock = await checkDbBruteForceLockout(ip, key);
+      if (dbLock.blocked) {
+        return jsonResp(req, { success: false, error: dbLock.reason }, 429);
+      }
+
       // Server-side Admin Authentication (zero secrets in browser!)
       if (key === ADMIN_USERNAME) {
         if (!ADMIN_PASSWORD) {
@@ -517,7 +692,13 @@ Deno.serve(async (req: Request) => {
       if (!checkRateLimit(`reg:${ip}`, 8, 900_000)) {
         return jsonResp(req, { success: false, error: '注册请求过于频繁，请稍后再试' }, 429);
       }
-      const { username = '', password = '', email = '', seed_data = null } = await req.json().catch(() => ({}));
+      const rawRegText = await req.text().catch(() => '');
+      if (rawRegText.length > MAX_SYNC_PAYLOAD_BYTES) {
+        return jsonResp(req, { success: false, error: '请求体过大，已拒绝' }, 413);
+      }
+      let regParsed: Record<string, unknown> = {};
+      try { regParsed = JSON.parse(rawRegText || '{}'); } catch { regParsed = {}; }
+      const { username = '', password = '', email = '', seed_data = null } = regParsed;
       const uname = String(username).trim();
       const key = uname.toLowerCase();
       const regBlob = `${uname}\n${String(email || '')}\n${String(password)}`;
@@ -535,7 +716,7 @@ Deno.serve(async (req: Request) => {
 
       const pwHash = await hashPasswordPbkdf2(String(password));
       const regMeta = await recordLoginLog(uname, 'register', req, true);
-      const baseData = (seed_data && typeof seed_data === 'object') ? seed_data : { lists: [], words: [], stats: {} };
+      const baseData = sanitizeFreshSeedData(seed_data);
       const cleanData = attachLoginMetaToData(baseData, 'register', regMeta, true);
       cleanData.disabled = false;
 
@@ -576,27 +757,41 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // ---- POST /sync/store (Authenticated self-only sync — strict IDOR defense) ----
+    // ---- POST /sync/store (Authenticated self-only sync — strict IDOR + Anti-Cheat defense) ----
     if (req.method === 'POST' && path === '/sync/store') {
       const sess = await getAuthSession(req);
       if (!sess) return jsonResp(req, { success: false, error: '请先登录账号' }, 401);
       if (sess.is_admin) return jsonResp(req, { success: true });
 
-      const { data: storeData } = await req.json().catch(() => ({}));
+      const rawText = await req.text().catch(() => '');
+      if (rawText.length > MAX_SYNC_PAYLOAD_BYTES) {
+        return jsonResp(req, { success: false, error: '同步数据体积超限（上限 512 KB）' }, 413);
+      }
+      let parsedBody: Record<string, unknown> = {};
+      try { parsedBody = JSON.parse(rawText || '{}'); } catch { parsedBody = {}; }
+      const storeData = parsedBody.data as Record<string, unknown> | undefined;
       if (!storeData || typeof storeData !== 'object') {
         return jsonResp(req, { success: false, error: '无效的同步数据' }, 400);
       }
-      // Preserve server-controlled disabled flag and server-recorded login audit metadata
-      const { data: cur } = await supabase.from('ec_users').select('data').eq('username', sess.sub).maybeSingle();
+      // Preserve server-controlled disabled flag, login audit metadata & enforce leaderboard anti-cheat
+      const { data: cur } = await supabase.from('ec_users').select('data, updated_at').eq('username', sess.sub).maybeSingle();
       if (cur?.data?.disabled) {
         return jsonResp(req, { success: false, error: '账号已被停用' }, 403);
       }
-      storeData.disabled = false;
-      if (cur?.data?.last_login) storeData.last_login = cur.data.last_login;
-      if (Array.isArray(cur?.data?.login_history)) storeData.login_history = cur.data.login_history;
+      const check = validateAndSanitizeSyncStore(storeData, cur?.data, cur?.updated_at);
+      if (!check.ok || !check.sanitized) {
+        await recordLoginLog(sess.display_name || sess.sub, 'hack_attempt', req, false);
+        return neonJsonResp(
+          req,
+          { success: false, error: '检测到异常刷分数据，云端同步已被安全策略拒绝' },
+          400,
+          check.cheatReason || 'Leaderboard Score Tampering',
+          rawText.slice(0, 2000),
+        );
+      }
       await supabase
         .from('ec_users')
-        .update({ data: storeData, updated_at: new Date().toISOString() })
+        .update({ data: check.sanitized, updated_at: new Date().toISOString() })
         .eq('username', sess.sub);
       return jsonResp(req, { success: true });
     }
