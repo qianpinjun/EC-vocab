@@ -489,7 +489,10 @@ class AdminModel:
                     COALESCE(s.last_active_at, u.created_at) AS last_active_at,
                     COALESCE((SELECT COUNT(*) FROM vocab_lists vl WHERE vl.user_id = u.id), 0) AS list_count,
                     COALESCE((SELECT COUNT(*) FROM words w WHERE w.user_id = u.id), 0) AS word_count,
-                    COALESCE((SELECT COUNT(DISTINCT LOWER(w.word)) FROM words w WHERE w.user_id = u.id AND w.mastered = 1), 0) AS vocab_mastered
+                    COALESCE((SELECT COUNT(DISTINCT LOWER(w.word)) FROM words w WHERE w.user_id = u.id AND w.mastered = 1), 0) AS vocab_mastered,
+                    (SELECT ll.ip_address FROM login_logs ll WHERE LOWER(ll.username) = LOWER(u.username) AND ll.success = 1 ORDER BY ll.id DESC LIMIT 1) AS last_login_ip,
+                    (SELECT ll.device_label FROM login_logs ll WHERE LOWER(ll.username) = LOWER(u.username) AND ll.success = 1 ORDER BY ll.id DESC LIMIT 1) AS last_login_device,
+                    (SELECT ll.created_at FROM login_logs ll WHERE LOWER(ll.username) = LOWER(u.username) AND ll.success = 1 ORDER BY ll.id DESC LIMIT 1) AS last_login_at
                 FROM users u
                 LEFT JOIN user_stats s ON s.user_id = u.id
                 WHERE u.password_hash IS NOT NULL AND u.password_hash != ''
@@ -531,6 +534,9 @@ class AdminModel:
                 'total_score': score,
                 'list_count': int(r['list_count'] or 0),
                 'word_count': int(r['word_count'] or 0),
+                'last_login_ip': r['last_login_ip'] or '',
+                'last_login_device': r['last_login_device'] or '',
+                'last_login_at': r['last_login_at'] or '',
             })
 
         tpl = AdminModel.load_template()
@@ -544,6 +550,69 @@ class AdminModel:
             },
             'accounts': accounts,
         }
+
+    @staticmethod
+    def record_login_log(user_id, username, event_type='login', ip_address='', device_label='', user_agent='', success=True):
+        uname = (username or '').strip()[:80]
+        if not uname:
+            return
+        with db_cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO login_logs (user_id, username, event_type, ip_address, device_label, user_agent, success)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    uname,
+                    (event_type or 'login')[:24],
+                    (ip_address or '')[:64],
+                    (device_label or '')[:80],
+                    (user_agent or '')[:180],
+                    1 if success else 0,
+                )
+            )
+
+    @staticmethod
+    def get_login_logs(username_filter='', limit=150):
+        lim = max(1, min(int(limit or 150), 500))
+        uf = (username_filter or '').strip()
+        with db_cursor(commit=False) as cur:
+            if uf:
+                cur.execute(
+                    """
+                    SELECT id, user_id, username, event_type, ip_address, device_label, user_agent, success, created_at
+                    FROM login_logs
+                    WHERE LOWER(username) = LOWER(?)
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (uf, lim)
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT id, user_id, username, event_type, ip_address, device_label, user_agent, success, created_at
+                    FROM login_logs
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (lim,)
+                )
+            return [
+                {
+                    'id': r['id'],
+                    'user_id': r['user_id'],
+                    'username': r['username'],
+                    'event_type': r['event_type'] or 'login',
+                    'ip_address': r['ip_address'] or 'unknown',
+                    'device_label': r['device_label'] or 'Unknown Device',
+                    'user_agent': r['user_agent'] or '',
+                    'success': bool(r['success']),
+                    'created_at': r['created_at'] or '',
+                }
+                for r in cur.fetchall()
+            ]
 
     @staticmethod
     def reset_password(target_user_id, new_password):

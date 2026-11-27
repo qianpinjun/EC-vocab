@@ -1398,6 +1398,9 @@ const API = {
                     is_admin: isAdm,
                     is_disabled: Boolean(d.disabled),
                     last_active_at: st.last_active_at || u.updated_at || '',
+                    last_login_at: (d.last_login && d.last_login.at) || '',
+                    last_login_ip: (d.last_login && d.last_login.ip) || '',
+                    last_login_device: (d.last_login && d.last_login.device) || '',
                     vocab_reviewed: vr,
                     vocab_correct: vc,
                     vocab_mastered: masteredSet.size,
@@ -1422,6 +1425,37 @@ const API = {
                 },
                 accounts
             };
+        },
+        async getLoginLogs(username = '', limit = 150) {
+            requireAdminSession();
+            if (getEdgeUrl() && getEdgeToken()) {
+                const params = new URLSearchParams();
+                if (username) params.set('username', username);
+                if (limit) params.set('limit', String(limit));
+                return await edgeFetch(`/admin/login_logs?${params.toString()}`, { method: 'GET' });
+            }
+            const map = await this._fetchAllCloudUsers();
+            const q = String(username || '').trim().toLowerCase();
+            const logs = [];
+            for (const [k, u] of map.entries()) {
+                const display = u.display_name || u.username || k;
+                if (q && !display.toLowerCase().includes(q) && !k.includes(q)) continue;
+                const hist = Array.isArray(u.data?.login_history) ? u.data.login_history : [];
+                hist.forEach((h, idx) => {
+                    logs.push({
+                        id: `${k}-${idx}`,
+                        username: display,
+                        event_type: h.event_type || 'login',
+                        ip_address: h.ip_address || '',
+                        device_label: h.device_label || 'Unknown Device',
+                        user_agent: h.user_agent || '',
+                        success: h.success !== false,
+                        created_at: h.created_at || ''
+                    });
+                });
+            }
+            logs.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+            return { success: true, logs: logs.slice(0, limit) };
         },
         async resetPassword(userId, newPassword) {
             requireAdminSession();

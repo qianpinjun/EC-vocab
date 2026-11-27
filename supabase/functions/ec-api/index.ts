@@ -189,9 +189,115 @@ async function getAuthSession(req: Request) {
   return claims;
 }
 
+function getClientIp(req: Request): string {
+  const cfIp = req.headers.get('cf-connecting-ip')?.trim();
+  if (cfIp) return cfIp.slice(0, 64);
+  const xff = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  if (xff) return xff.slice(0, 64);
+  const realIp = req.headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp.slice(0, 64);
+  return 'unknown';
+}
+
+function parseDeviceLabel(userAgent: string): string {
+  const ua = String(userAgent || '').trim();
+  if (!ua) return 'Unknown Device';
+  const low = ua.toLowerCase();
+
+  let osLabel = 'Unknown OS';
+  if (low.includes('ipad') || (low.includes('macintosh') && low.includes('mobile'))) {
+    osLabel = 'iPad (iPadOS)';
+  } else if (low.includes('iphone')) {
+    osLabel = 'iPhone (iOS)';
+  } else if (low.includes('android')) {
+    osLabel = low.includes('mobile') ? 'Android Phone' : 'Android Tablet';
+  } else if (low.includes('windows nt') || low.includes('windows')) {
+    osLabel = 'Windows PC';
+  } else if (low.includes('mac os x') || low.includes('macintosh')) {
+    osLabel = 'Mac / macOS';
+  } else if (low.includes('cros')) {
+    osLabel = 'Chromebook';
+  } else if (low.includes('linux')) {
+    osLabel = 'Linux';
+  }
+
+  let browserLabel = '';
+  if (low.includes('micromessenger')) {
+    browserLabel = 'WeChat';
+  } else if (low.includes('edg/') || low.includes('edga/') || low.includes('edgios/')) {
+    browserLabel = 'Edge';
+  } else if (low.includes('opr/') || low.includes('opera')) {
+    browserLabel = 'Opera';
+  } else if (low.includes('firefox/') || low.includes('fxios/')) {
+    browserLabel = 'Firefox';
+  } else if (low.includes('chrome/') || low.includes('crios/')) {
+    browserLabel = 'Chrome';
+  } else if (low.includes('safari/')) {
+    browserLabel = 'Safari';
+  }
+
+  return browserLabel ? `${osLabel} · ${browserLabel}` : osLabel;
+}
+
+async function recordLoginLog(
+  username: string,
+  eventType: string,
+  req: Request,
+  success: boolean,
+): Promise<{ at: string; ip: string; device: string; ua: string }> {
+  const at = new Date().toISOString();
+  const ip = getClientIp(req);
+  const ua = (req.headers.get('user-agent') || '').slice(0, 300);
+  const device = parseDeviceLabel(ua);
+  try {
+    await supabase.from('ec_login_logs').insert({
+      username: String(username || '').trim().slice(0, 80),
+      event_type: eventType,
+      ip_address: ip,
+      device_label: device,
+      user_agent: ua,
+      success: Boolean(success),
+      created_at: at,
+    });
+  } catch {
+    // Non-blocking if 002_login_logs.sql hasn't been applied yet
+  }
+  return { at, ip, device, ua };
+}
+
+function attachLoginMetaToData(
+  rawData: Record<string, unknown> | null | undefined,
+  eventType: string,
+  meta: { at: string; ip: string; device: string; ua: string },
+  success: boolean,
+): Record<string, unknown> {
+  const nextData = (rawData && typeof rawData === 'object') ? { ...rawData } : {};
+  if (success) {
+    nextData.last_login = {
+      at: meta.at,
+      ip: meta.ip,
+      device: meta.device,
+      event_type: eventType,
+    };
+  }
+  const prevHist = Array.isArray(nextData.login_history) ? nextData.login_history : [];
+  nextData.login_history = [
+    {
+      event_type: eventType,
+      ip_address: meta.ip,
+      device_label: meta.device,
+      user_agent: meta.ua,
+      success: Boolean(success),
+      created_at: meta.at,
+    },
+    ...prevHist,
+  ].slice(0, 25);
+  return nextData;
+}
+
 async function writeAudit(actor: string, action: string, target: string, req: Request) {
   try {
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const ip = getClientIp(req);
     const ipHash = (await sha256Hex(ip)).slice(0, 16);
     await supabase.from('ec_security_audit').insert({ actor, action, target, ip_hash: ipHash });
   } catch {
@@ -209,7 +315,7 @@ Deno.serve(async (req: Request) => {
   const path = url.pathname
     .replace(/^\/functions\/v1\/[^/]+/, '')
     .replace(/^\/(?!auth\/|sync\/|leaderboard\b|admin\/)[^/]+/, '') || '/';
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const ip = getClientIp(req);
 
   try {
     // ---- POST /auth/login ----
@@ -228,8 +334,12 @@ Deno.serve(async (req: Request) => {
           return jsonResp(req, { success: false, error: '服务端未配置 ADMIN_PASSWORD 密钥' }, 503);
         }
         const ok = timingSafeEqual(enc.encode(String(password)), enc.encode(ADMIN_PASSWORD));
-        if (!ok) return jsonResp(req, { success: false, error: '管理员密码错误' }, 401);
+        if (!ok) {
+          await recordLoginLog(ADMIN_USERNAME, 'failed', req, false);
+          return jsonResp(req, { success: false, error: '管理员密码错误' }, 401);
+        }
         const token = await signToken({ sub: ADMIN_USERNAME, display_name: ADMIN_USERNAME, is_admin: true });
+        await recordLoginLog(ADMIN_USERNAME, 'login', req, true);
         await writeAudit(ADMIN_USERNAME, 'admin_login', 'self', req);
         return jsonResp(req, {
           success: true,
@@ -246,26 +356,40 @@ Deno.serve(async (req: Request) => {
         .eq('username', key)
         .maybeSingle();
 
-      if (!row) return jsonResp(req, { success: false, error: '用户名或密码错误' }, 401);
+      if (!row) {
+        await recordLoginLog(uname, 'failed', req, false);
+        return jsonResp(req, { success: false, error: '用户名或密码错误' }, 401);
+      }
+      const displayName = row.display_name || row.username;
       const check = await verifyPassword(key, String(password), String(row.password_hash || ''));
-      if (!check.ok) return jsonResp(req, { success: false, error: '用户名或密码错误' }, 401);
+      if (!check.ok) {
+        const meta = await recordLoginLog(displayName, 'failed', req, false);
+        const nextData = attachLoginMetaToData(row.data, 'failed', meta, false);
+        await supabase.from('ec_users').update({ data: nextData }).eq('username', key);
+        return jsonResp(req, { success: false, error: '用户名或密码错误' }, 401);
+      }
       if (row.data && row.data.disabled) {
+        const meta = await recordLoginLog(displayName, 'disabled', req, false);
+        const nextData = attachLoginMetaToData(row.data, 'disabled', meta, false);
+        await supabase.from('ec_users').update({ data: nextData }).eq('username', key);
         return jsonResp(req, { success: false, error: '该账号已被管理员停用，请联系老师恢复' }, 403);
       }
 
+      const loginMeta = await recordLoginLog(displayName, 'login', req, true);
+      const updatedUserData = attachLoginMetaToData(row.data, 'login', loginMeta, true);
+      const updatePatch: Record<string, unknown> = { data: updatedUserData };
       if (check.needsUpgrade) {
-        const upgraded = await hashPasswordPbkdf2(String(password));
-        await supabase.from('ec_users').update({ password_hash: upgraded }).eq('username', key);
+        updatePatch.password_hash = await hashPasswordPbkdf2(String(password));
       }
+      await supabase.from('ec_users').update(updatePatch).eq('username', key);
 
-      const displayName = row.display_name || row.username;
       const token = await signToken({ sub: key, display_name: displayName, is_admin: false });
       return jsonResp(req, {
         success: true,
         logged_in: true,
         token,
         user: { username: displayName, is_admin: false },
-        data: row.data || null,
+        data: updatedUserData,
         message: `欢迎回来，${displayName}！`,
       });
     }
@@ -286,7 +410,9 @@ Deno.serve(async (req: Request) => {
       if (existing) return jsonResp(req, { success: false, error: '该用户名已被注册' }, 400);
 
       const pwHash = await hashPasswordPbkdf2(String(password));
-      const cleanData = (seed_data && typeof seed_data === 'object') ? seed_data : { lists: [], words: [], stats: {} };
+      const regMeta = await recordLoginLog(uname, 'register', req, true);
+      const baseData = (seed_data && typeof seed_data === 'object') ? seed_data : { lists: [], words: [], stats: {} };
+      const cleanData = attachLoginMetaToData(baseData, 'register', regMeta, true);
       cleanData.disabled = false;
 
       const { error } = await supabase.from('ec_users').insert({
@@ -336,12 +462,14 @@ Deno.serve(async (req: Request) => {
       if (!storeData || typeof storeData !== 'object') {
         return jsonResp(req, { success: false, error: '无效的同步数据' }, 400);
       }
-      // Preserve server-controlled disabled flag so a client cannot self-unban
+      // Preserve server-controlled disabled flag and server-recorded login audit metadata
       const { data: cur } = await supabase.from('ec_users').select('data').eq('username', sess.sub).maybeSingle();
       if (cur?.data?.disabled) {
         return jsonResp(req, { success: false, error: '账号已被停用' }, 403);
       }
       storeData.disabled = false;
+      if (cur?.data?.last_login) storeData.last_login = cur.data.last_login;
+      if (Array.isArray(cur?.data?.login_history)) storeData.login_history = cur.data.login_history;
       await supabase
         .from('ec_users')
         .update({ data: storeData, updated_at: new Date().toISOString() })
@@ -453,6 +581,7 @@ Deno.serve(async (req: Request) => {
             totalVocab += vr;
             totalGrammar += gc;
           }
+          const lastLogin = (d.last_login && typeof d.last_login === 'object') ? d.last_login : {};
           return {
             id: k,
             username: u.display_name || u.username || k,
@@ -460,6 +589,9 @@ Deno.serve(async (req: Request) => {
             is_admin: isAdm,
             is_disabled: Boolean(d.disabled),
             last_active_at: st.last_active_at || u.updated_at || '',
+            last_login_at: String(lastLogin.at || ''),
+            last_login_ip: String(lastLogin.ip || ''),
+            last_login_device: String(lastLogin.device || ''),
             vocab_reviewed: vr,
             vocab_correct: vc,
             vocab_mastered: mastered,
@@ -481,6 +613,57 @@ Deno.serve(async (req: Request) => {
           },
           accounts,
         });
+      }
+
+      if (req.method === 'GET' && path === '/admin/login_logs') {
+        const usernameFilter = String(url.searchParams.get('username') || '').trim();
+        const limitRaw = Number(url.searchParams.get('limit') || 150);
+        const limit = Math.max(1, Math.min(500, Number.isFinite(limitRaw) ? limitRaw : 150));
+
+        // Primary source: dedicated public.ec_login_logs table (from 002_login_logs.sql)
+        let query = supabase
+          .from('ec_login_logs')
+          .select('id, username, event_type, ip_address, device_label, user_agent, success, created_at')
+          .order('id', { ascending: false })
+          .limit(limit);
+        if (usernameFilter) {
+          query = query.ilike('username', `%${usernameFilter}%`);
+        }
+        const { data: tableLogs, error: tableErr } = await query;
+        if (!tableErr && Array.isArray(tableLogs) && tableLogs.length > 0) {
+          return jsonResp(req, { success: true, logs: tableLogs });
+        }
+
+        // Seamless fallback: synthesize timeline from ec_users.data.login_history
+        // (guarantees Admin Login Details works immediately even before 002_login_logs.sql is applied)
+        const { data: usersRows } = await supabase
+          .from('ec_users')
+          .select('username, display_name, data')
+          .limit(300);
+
+        const qLower = usernameFilter.toLowerCase();
+        const merged: Array<Record<string, unknown>> = [];
+        for (const u of (usersRows || [])) {
+          const display = String(u.display_name || u.username || '');
+          if (qLower && !display.toLowerCase().includes(qLower) && !String(u.username || '').toLowerCase().includes(qLower)) {
+            continue;
+          }
+          const hist = Array.isArray(u.data?.login_history) ? u.data.login_history : [];
+          hist.forEach((h: any, idx: number) => {
+            merged.push({
+              id: `${u.username}-${idx}`,
+              username: display,
+              event_type: String(h.event_type || 'login'),
+              ip_address: String(h.ip_address || ''),
+              device_label: String(h.device_label || 'Unknown Device'),
+              user_agent: String(h.user_agent || ''),
+              success: h.success !== false,
+              created_at: String(h.created_at || ''),
+            });
+          });
+        }
+        merged.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+        return jsonResp(req, { success: true, logs: merged.slice(0, limit) });
       }
 
       if (req.method === 'POST' && path === '/admin/user_action') {

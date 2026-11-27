@@ -17,6 +17,7 @@ from story_engine import generate_absurd_story
 from security import (
     rate_limiter,
     get_client_ip,
+    parse_device_label,
     verify_csrf_request,
     apply_security_headers,
     validate_binary_upload,
@@ -124,6 +125,16 @@ def api_auth_register():
     email = str(data.get('email', '')).strip()
     try:
         user = UserModel.register(username, password, email)
+        ua = request.headers.get('User-Agent', '')
+        AdminModel.record_login_log(
+            user_id=user['id'],
+            username=user['username'],
+            event_type='register',
+            ip_address=ip,
+            device_label=parse_device_label(ua),
+            user_agent=ua,
+            success=True,
+        )
         session.clear()
         session.permanent = True
         session['user_id'] = user['id']
@@ -142,6 +153,8 @@ def api_auth_register():
 @app.route('/api/auth/login', methods=['POST'])
 def api_auth_login():
     ip = get_client_ip(request)
+    ua = request.headers.get('User-Agent', '')
+    device_label = parse_device_label(ua)
     data = request.get_json(silent=True) or {}
     username = str(data.get('username', '')).strip()
     password = str(data.get('password', ''))
@@ -162,11 +175,23 @@ def api_auth_login():
     try:
         user = UserModel.authenticate(username, password)
     except PermissionError as e:
+        AdminModel.record_login_log(None, username, 'disabled', ip, device_label, ua, success=False)
         return jsonify({'success': False, 'error': str(e)}), 403
     if not user:
+        if username:
+            AdminModel.record_login_log(None, username, 'failed', ip, device_label, ua, success=False)
         return jsonify({'success': False, 'error': '用户名或密码错误'}), 401
 
     rate_limiter.reset(user_key)
+    AdminModel.record_login_log(
+        user_id=user['id'],
+        username=user['username'],
+        event_type='login',
+        ip_address=ip,
+        device_label=device_label,
+        user_agent=ua,
+        success=True,
+    )
     session.clear()
     session.permanent = True
     session['user_id'] = user['id']
@@ -524,6 +549,15 @@ def _parse_batch_text(raw_text):
 @admin_required
 def api_admin_overview():
     return jsonify({'success': True, **AdminModel.get_overview()})
+
+
+@app.route('/api/admin/login_logs', methods=['GET'])
+@admin_required
+def api_admin_login_logs():
+    username_filter = request.args.get('username', '').strip()
+    limit = request.args.get('limit', 150, type=int) or 150
+    logs = AdminModel.get_login_logs(username_filter=username_filter, limit=limit)
+    return jsonify({'success': True, 'logs': logs})
 
 
 @app.route('/api/admin/users/<int:target_user_id>/reset_password', methods=['POST'])

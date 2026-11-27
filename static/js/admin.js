@@ -2,6 +2,9 @@
 
 const AdminModule = {
     accounts: [],
+    loginLogs: [],
+    loginStatusFilter: 'all',
+    activeSubTab: 'accounts',
     currentScope: 'template',
     currentBanks: [],
     selectedListId: null,
@@ -11,12 +14,16 @@ const AdminModule = {
         const subTabs = document.querySelectorAll('#adminSubTabs .lb-sort-btn');
         subTabs.forEach(btn => {
             btn.addEventListener('click', () => {
-                const target = btn.getAttribute('data-admin-tab');
+                const target = btn.getAttribute('data-admin-tab') || 'accounts';
+                this.activeSubTab = target;
                 subTabs.forEach(b => b.classList.toggle('active', b === btn));
                 const accPanel = document.getElementById('adminPanelAccounts');
+                const logPanel = document.getElementById('adminPanelLogins');
                 const bankPanel = document.getElementById('adminPanelBanks');
                 if (accPanel) accPanel.style.display = target === 'accounts' ? 'block' : 'none';
+                if (logPanel) logPanel.style.display = target === 'logins' ? 'block' : 'none';
                 if (bankPanel) bankPanel.style.display = target === 'banks' ? 'block' : 'none';
+                if (target === 'logins') this.loadLoginLogs();
                 if (target === 'banks') this.loadWordbanks();
             });
         });
@@ -24,6 +31,30 @@ const AdminModule = {
         const searchEl = document.getElementById('adminAccountSearch');
         if (searchEl) {
             searchEl.addEventListener('input', () => this.renderAccountsTable(searchEl.value.trim().toLowerCase()));
+        }
+
+        const logSearchEl = document.getElementById('adminLoginSearch');
+        if (logSearchEl) {
+            logSearchEl.addEventListener('input', () => this.renderLoginLogsTable());
+        }
+
+        const logStatusBtns = document.querySelectorAll('#adminLoginStatusFilter .lb-sort-btn');
+        logStatusBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.loginStatusFilter = btn.getAttribute('data-log-status') || 'all';
+                logStatusBtns.forEach(b => b.classList.toggle('active', b === btn));
+                this.renderLoginLogsTable();
+            });
+        });
+
+        const clearLogBtn = document.getElementById('btnAdminClearLogFilter');
+        if (clearLogBtn) {
+            clearLogBtn.addEventListener('click', () => {
+                if (logSearchEl) logSearchEl.value = '';
+                this.loginStatusFilter = 'all';
+                logStatusBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-log-status') === 'all'));
+                this.renderLoginLogsTable();
+            });
         }
 
         const btnRefresh = document.getElementById('btnAdminRefresh');
@@ -74,6 +105,37 @@ const AdminModule = {
         return String(ts).slice(0, 16);
     },
 
+    fmtExactTime(ts) {
+        if (!ts) return '—';
+        const raw = String(ts).trim();
+        let iso = raw;
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)) {
+            iso = raw.replace(' ', 'T') + 'Z';
+        }
+        const dt = new Date(iso);
+        if (Number.isNaN(dt.getTime())) return raw.slice(0, 19);
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+    },
+
+    deviceIcon(label) {
+        const low = String(label || '').toLowerCase();
+        if (low.includes('iphone') || low.includes('android phone')) return 'fa-solid fa-mobile-screen';
+        if (low.includes('ipad') || low.includes('tablet')) return 'fa-solid fa-tablet-screen-button';
+        if (low.includes('mac') || low.includes('windows') || low.includes('chromebook') || low.includes('linux')) {
+            return 'fa-solid fa-laptop';
+        }
+        return 'fa-solid fa-desktop';
+    },
+
+    eventTagHtml(eventType) {
+        const ev = String(eventType || 'login').toLowerCase();
+        if (ev === 'register') return '<span class="admin-event-tag ev-register">新注册</span>';
+        if (ev === 'failed') return '<span class="admin-event-tag ev-failed">密码错误</span>';
+        if (ev === 'disabled') return '<span class="admin-event-tag ev-disabled">停用拦截</span>';
+        return '<span class="admin-event-tag ev-login">登录</span>';
+    },
+
     async loadAll(notify = false) {
         if (!window.API || !API.admin) return;
         try {
@@ -90,11 +152,109 @@ const AdminModule = {
             this.populateScopeDropdown();
             const q = (document.getElementById('adminAccountSearch')?.value || '').trim().toLowerCase();
             this.renderAccountsTable(q);
-            await this.loadWordbanks();
+            if (this.activeSubTab === 'logins') {
+                await this.loadLoginLogs();
+            } else {
+                await this.loadWordbanks();
+            }
             if (notify) showToast('管理后台数据已刷新', 'success');
         } catch (err) {
             showToast('加载管理后台失败: ' + err.message, 'error');
         }
+    },
+
+    async loadLoginLogs() {
+        const tbody = document.getElementById('adminLoginLogsBody');
+        if (!tbody || !window.API || !API.admin || typeof API.admin.getLoginLogs !== 'function') return;
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.75rem; color:var(--text-muted);">正在加载登录详情记录...</td></tr>';
+        try {
+            const res = await API.admin.getLoginLogs('', 200);
+            this.loginLogs = Array.isArray(res.logs) ? res.logs : [];
+            this.renderLoginLogsTable();
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.75rem; color:var(--state-error);">加载失败：${this.esc(err.message)}</td></tr>`;
+        }
+    },
+
+    renderLoginLogsTable() {
+        const tbody = document.getElementById('adminLoginLogsBody');
+        if (!tbody) return;
+        const q = (document.getElementById('adminLoginSearch')?.value || '').trim().toLowerCase();
+        const status = this.loginStatusFilter || 'all';
+        const clearBtn = document.getElementById('btnAdminClearLogFilter');
+        if (clearBtn) {
+            clearBtn.style.display = (q || status !== 'all') ? 'inline-flex' : 'none';
+        }
+
+        let rows = this.loginLogs.slice();
+        if (status === 'ok') {
+            rows = rows.filter(r => r.success !== false);
+        } else if (status === 'fail') {
+            rows = rows.filter(r => r.success === false);
+        }
+        if (q) {
+            rows = rows.filter(r =>
+                String(r.username || '').toLowerCase().includes(q) ||
+                String(r.ip_address || '').toLowerCase().includes(q) ||
+                String(r.device_label || '').toLowerCase().includes(q) ||
+                String(r.user_agent || '').toLowerCase().includes(q)
+            );
+        }
+
+        const countEl = document.getElementById('adminLoginCount');
+        if (countEl) {
+            countEl.textContent = (q || status !== 'all')
+                ? `${rows.length} / ${this.loginLogs.length} 条记录`
+                : `${rows.length} 条记录`;
+        }
+
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">暂无匹配的登录日志记录（账号完成登录后将自动在此记录时间、设备与 IP）</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map(r => {
+            const ok = r.success !== false;
+            const iconCls = this.deviceIcon(r.device_label);
+            const ipVal = r.ip_address || 'unknown';
+            const devLabel = r.device_label || 'Unknown Device';
+            const uaTitle = r.user_agent ? `原始 User-Agent: ${r.user_agent}` : devLabel;
+            const statusPill = ok
+                ? '<span class="admin-status-pill status-active">成功</span>'
+                : '<span class="admin-status-pill status-disabled">失败</span>';
+
+            return `
+                <tr class="${ok ? '' : 'admin-log-row-fail'}">
+                    <td class="admin-log-time">${this.esc(this.fmtExactTime(r.created_at))}</td>
+                    <td>
+                        <div class="admin-log-user">
+                            <strong>${this.esc(r.username)}</strong>
+                            ${this.eventTagHtml(r.event_type)}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="admin-device-cell" title="${this.esc(uaTitle)}">
+                            <i class="${iconCls}"></i>
+                            <span>${this.esc(devLabel)}</span>
+                        </div>
+                    </td>
+                    <td><code class="admin-ip-chip">${this.esc(ipVal)}</code></td>
+                    <td style="text-align:right;">${statusPill}</td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    openLogsForUser(username) {
+        const logTabBtn = document.querySelector('#adminSubTabs .lb-sort-btn[data-admin-tab="logins"]');
+        const logSearchEl = document.getElementById('adminLoginSearch');
+        const clearBtn = document.getElementById('btnAdminClearLogFilter');
+        const logStatusBtns = document.querySelectorAll('#adminLoginStatusFilter .lb-sort-btn');
+        this.loginStatusFilter = 'all';
+        logStatusBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-log-status') === 'all'));
+        if (logSearchEl) logSearchEl.value = username || '';
+        if (clearBtn) clearBtn.style.display = username ? 'inline-flex' : 'none';
+        if (logTabBtn) logTabBtn.click();
     },
 
     populateScopeDropdown() {
@@ -121,7 +281,9 @@ const AdminModule = {
         if (query) {
             list = list.filter(a =>
                 String(a.username || '').toLowerCase().includes(query) ||
-                String(a.email || '').toLowerCase().includes(query)
+                String(a.email || '').toLowerCase().includes(query) ||
+                String(a.last_login_ip || '').toLowerCase().includes(query) ||
+                String(a.last_login_device || '').toLowerCase().includes(query)
             );
         }
         if (!list.length) {
@@ -136,10 +298,21 @@ const AdminModule = {
                     ? '<span class="admin-status-pill status-disabled">已停用</span>'
                     : '<span class="admin-status-pill status-active">正常</span>');
 
+            const loginMetaParts = [a.last_login_device, a.last_login_ip].filter(Boolean);
+            const loginMetaText = loginMetaParts.join(' · ');
+            const loginMetaHtml = loginMetaText
+                ? `<div class="admin-last-login-meta" title="${this.esc('最近登录：' + (a.last_login_at ? this.fmtExactTime(a.last_login_at) + ' · ' : '') + loginMetaText)}">${this.esc(loginMetaText)}</div>`
+                : '';
+
             const actionsHtml = a.is_admin
-                ? '<span class="text-muted" style="font-size:0.8rem;">当前管理员</span>'
+                ? `
+                    <div class="admin-row-actions">
+                        <button type="button" class="btn-mini" data-act="logs" data-id="${this.esc(a.id)}" data-name="${this.esc(a.username)}">日志</button>
+                    </div>
+                `
                 : `
                     <div class="admin-row-actions">
+                        <button type="button" class="btn-mini" data-act="logs" data-id="${this.esc(a.id)}" data-name="${this.esc(a.username)}" title="查看该同学的登录时间、设备与 IP">日志</button>
                         <button type="button" class="btn-mini" data-act="banks" data-id="${this.esc(a.id)}">词库</button>
                         <button type="button" class="btn-mini" data-act="pwd" data-id="${this.esc(a.id)}" data-name="${this.esc(a.username)}">改密</button>
                         <button type="button" class="btn-mini" data-act="reset" data-id="${this.esc(a.id)}" data-name="${this.esc(a.username)}">清零</button>
@@ -160,7 +333,10 @@ const AdminModule = {
                     <td class="lb-num">${a.grammar_completed}</td>
                     <td class="lb-num">${a.accuracy_pct}%</td>
                     <td class="lb-num">${a.list_count} / ${a.word_count}</td>
-                    <td class="lb-time">${this.esc(this.fmtTime(a.last_active_at))}</td>
+                    <td class="lb-time">
+                        <div>${this.esc(this.fmtTime(a.last_active_at || a.last_login_at))}</div>
+                        ${loginMetaHtml}
+                    </td>
                     <td>${actionsHtml}</td>
                 </tr>
             `;
@@ -173,7 +349,9 @@ const AdminModule = {
                 const uname = btn.getAttribute('data-name') || uid;
 
                 try {
-                    if (act === 'banks') {
+                    if (act === 'logs') {
+                        this.openLogsForUser(uname);
+                    } else if (act === 'banks') {
                         this.currentScope = `user:${uid}`;
                         const bankTabBtn = document.querySelector('#adminSubTabs .lb-sort-btn[data-admin-tab="banks"]');
                         if (bankTabBtn) bankTabBtn.click();

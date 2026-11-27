@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EC Vocabulary Studio - 情境词汇研习系统</title>
-    <link rel="stylesheet" href="./css/style.css?v=20261126b">
+    <link rel="stylesheet" href="./css/style.css?v=20261128a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -712,6 +712,7 @@ dialogue 对话，对白"></textarea>
                     <div class="header-right">
                         <div class="lb-sort-bar" id="adminSubTabs">
                             <button type="button" class="lb-sort-btn active" data-admin-tab="accounts">账号与状态</button>
+                            <button type="button" class="lb-sort-btn" data-admin-tab="logins">登录日志与设备</button>
                             <button type="button" class="lb-sort-btn" data-admin-tab="banks">词库管控与新建</button>
                         </div>
                         <button type="button" class="btn btn-secondary btn-sm" id="btnAdminRefresh">刷新</button>
@@ -762,6 +763,44 @@ dialogue 对话，对白"></textarea>
                                 </thead>
                                 <tbody id="adminAccountsBody"></tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tab 1b: Login Audit Logs (Time, Device, IP) -->
+                <div id="adminPanelLogins" style="display: none;">
+                    <div class="content-card lb-table-card">
+                        <div class="admin-table-bar">
+                            <div class="admin-log-title-wrap">
+                                <strong>登录详情与安全日志（时间 · 设备 · IP）</strong>
+                                <span class="admin-log-count" id="adminLoginCount">0 条记录</span>
+                            </div>
+                            <div class="admin-log-filters">
+                                <div class="lb-sort-bar admin-log-status-bar" id="adminLoginStatusFilter">
+                                    <button type="button" class="lb-sort-btn active" data-log-status="all">全部</button>
+                                    <button type="button" class="lb-sort-btn" data-log-status="ok">成功</button>
+                                    <button type="button" class="lb-sort-btn" data-log-status="fail">异常</button>
+                                </div>
+                                <input type="text" id="adminLoginSearch" class="form-input" placeholder="按账号、IP 或设备搜索..." style="max-width: 240px; padding: 0.4rem 0.7rem;">
+                                <button type="button" class="btn btn-secondary btn-sm" id="btnAdminClearLogFilter" style="display: none;">清除筛选</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table lb-table admin-logs-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 175px;">登录时间</th>
+                                        <th>账号与事件</th>
+                                        <th>设备与浏览器</th>
+                                        <th style="width: 165px;">IP 地址</th>
+                                        <th style="width: 96px; text-align:right;">结果</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminLoginLogsBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="lb-footnote">
+                            记录所有账号的登录、注册及异常尝试（含精确时间戳、解析后的设备与浏览器类型、客户端 IP；将鼠标悬停在设备名称上可查看完整 User-Agent）。
                         </div>
                     </div>
                 </div>
@@ -1064,13 +1103,13 @@ dialogue 对话，对白"></textarea>
     <script src="./js/cloud_config.js?v=20261122b"></script>
     <script src="./js/question_bank.js?v=20261121"></script>
     <script src="./js/story_ai.js?v=20261123a"></script>
-    <script src="./js/api.js?v=20261122c"></script>
+    <script src="./js/api.js?v=20261128a"></script>
     <script src="./js/vocab.js?v=20261121f"></script>
     <script src="./js/quiz.js?v=20261121f"></script>
     <script src="./js/grammar_data.js?v=20261127a"></script>
     <script src="./js/grammar.js?v=20261127b"></script>
     <script src="./js/leaderboard.js?v=20261121d"></script>
-    <script src="./js/admin.js?v=20261121d"></script>
+    <script src="./js/admin.js?v=20261128a"></script>
     <script src="./js/onboarding.js?v=20261126a"></script>
     <script src="./js/main.js?v=20261124a"></script>
 </body>

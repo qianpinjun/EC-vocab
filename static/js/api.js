@@ -257,6 +257,12 @@ const API = {
         async overview() {
             return await fetchJson('/admin/overview');
         },
+        async getLoginLogs(username = '', limit = 150) {
+            const params = new URLSearchParams();
+            if (username) params.set('username', username);
+            if (limit) params.set('limit', String(limit));
+            return await fetchJson(`/admin/login_logs?${params.toString()}`);
+        },
         async resetPassword(userId, newPassword) {
             return await fetchJson(`/admin/users/${userId}/reset_password`, {
                 method: 'POST',

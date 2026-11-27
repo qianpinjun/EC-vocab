@@ -355,6 +355,74 @@ class RealDatabaseSecurityTestSuite(unittest.TestCase):
         relogin = self._login(self.client_a, 'revoke_target', 'ValidPass1!')
         self.assertEqual(relogin.status_code, 403)
 
+    # ------------------------------------------------------------------
+    # Admin Login Audit Details: Time, Device, IP & Access Control
+    # ------------------------------------------------------------------
+    def test_10_admin_login_logs_and_access_control(self):
+        mac_ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+        iphone_ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1'
+
+        # 1. Register & login with realistic User-Agent + X-Forwarded-For headers
+        r_reg = self.client_a.post(
+            '/api/auth/register',
+            json={'username': 'audit_student', 'password': 'AuditPass1!', 'email': 'audit@school.edu'},
+            headers={'User-Agent': mac_ua, 'X-Forwarded-For': '203.0.113.42'},
+        )
+        self.assertEqual(r_reg.status_code, 200)
+
+        # Student & unauthenticated callers must NEVER view login logs
+        self.assertEqual(self.client_a.get('/api/admin/login_logs').status_code, 403)
+        self.assertEqual(self.app.test_client().get('/api/admin/login_logs').status_code, 401)
+
+        # Failed login attempt from iPhone IP
+        r_fail = self.client_b.post(
+            '/api/auth/login',
+            json={'username': 'audit_student', 'password': 'WrongPassword'},
+            headers={'User-Agent': iphone_ua, 'X-Forwarded-For': '198.51.100.77'},
+        )
+        self.assertEqual(r_fail.status_code, 401)
+
+        # Successful login from iPhone IP
+        r_ok = self.client_b.post(
+            '/api/auth/login',
+            json={'username': 'audit_student', 'password': 'AuditPass1!'},
+            headers={'User-Agent': iphone_ua, 'X-Forwarded-For': '198.51.100.77'},
+        )
+        self.assertEqual(r_ok.status_code, 200)
+
+        # 2. Admin retrieves filtered login logs & overview metadata
+        self._login(self.client_admin, 'admin', os.environ['ADMIN_PASSWORD'])
+        res_logs = self.client_admin.get('/api/admin/login_logs?username=audit_student')
+        self.assertEqual(res_logs.status_code, 200)
+        payload = res_logs.get_json()
+        self.assertTrue(payload['success'])
+        self.assertNotIn('password_hash', str(payload))
+        logs = payload['logs']
+        self.assertGreaterEqual(len(logs), 3)
+
+        events = [entry['event_type'] for entry in logs]
+        self.assertIn('register', events)
+        self.assertIn('failed', events)
+        self.assertIn('login', events)
+
+        latest_login = next(e for e in logs if e['event_type'] == 'login')
+        self.assertEqual(latest_login['username'], 'audit_student')
+        self.assertEqual(latest_login['device_label'], 'iPhone (iOS) · Safari')
+        self.assertEqual(latest_login['ip_address'], '198.51.100.77')
+        self.assertTrue(latest_login['created_at'])
+        self.assertTrue(latest_login['success'])
+
+        reg_log = next(e for e in logs if e['event_type'] == 'register')
+        self.assertEqual(reg_log['device_label'], 'Mac / macOS · Chrome')
+        self.assertEqual(reg_log['ip_address'], '203.0.113.42')
+
+        # 3. Admin overview also surfaces latest login device & IP on student row
+        ov = self.client_admin.get('/api/admin/overview').get_json()
+        row = next(a for a in ov['accounts'] if a['username'] == 'audit_student')
+        self.assertEqual(row['last_login_device'], 'iPhone (iOS) · Safari')
+        self.assertEqual(row['last_login_ip'], '198.51.100.77')
+        self.assertTrue(row['last_login_at'])
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -55,8 +55,69 @@ rate_limiter = SlidingWindowRateLimiter()
 
 
 def get_client_ip(request_obj) -> str:
-    """Return client IP (already normalized by ProxyFix when behind a trusted proxy)."""
-    return (request_obj.remote_addr or '127.0.0.1').strip()
+    """Return client IP (respecting CF-Connecting-IP / X-Real-IP / ProxyFix)."""
+    cf_ip = (request_obj.headers.get('CF-Connecting-IP') or '').strip()
+    if cf_ip:
+        return cf_ip[:64]
+    xff = (request_obj.headers.get('X-Forwarded-For') or '').strip()
+    if xff:
+        first = xff.split(',')[0].strip()
+        if first:
+            return first[:64]
+    x_real = (request_obj.headers.get('X-Real-IP') or '').strip()
+    if x_real:
+        return x_real[:64]
+    return (request_obj.remote_addr or '127.0.0.1').strip()[:64]
+
+
+def parse_device_label(user_agent: str) -> str:
+    """Convert raw User-Agent into a clean, readable device + browser label."""
+    ua = (user_agent or '').strip()
+    if not ua:
+        return 'Unknown Device'
+    low = ua.lower()
+
+    # Detect OS / Hardware
+    if 'iphone' in low:
+        device = 'iPhone (iOS)'
+    elif 'ipad' in low:
+        device = 'iPad (iPadOS)'
+    elif 'android' in low:
+        device = 'Android Tablet' if ('tablet' in low or 'pad' in low) else 'Android Phone'
+    elif 'macintosh' in low or 'mac os x' in low:
+        device = 'Mac / macOS'
+    elif 'windows' in low:
+        device = 'Windows PC'
+    elif 'cros' in low:
+        device = 'Chromebook'
+    elif 'linux' in low:
+        device = 'Linux PC'
+    else:
+        device = 'Desktop / Other'
+
+    # Detect Browser
+    if 'edg/' in low or 'edga/' in low or 'edgios/' in low:
+        browser = 'Edge'
+    elif 'opr/' in low or 'opera' in low:
+        browser = 'Opera'
+    elif 'firefox/' in low or 'fxios/' in low:
+        browser = 'Firefox'
+    elif 'micromessenger' in low:
+        browser = 'WeChat'
+    elif 'qqbrowser' in low:
+        browser = 'QQ Browser'
+    elif 'chrome/' in low or 'crios/' in low:
+        browser = 'Chrome'
+    elif 'safari/' in low:
+        browser = 'Safari'
+    elif 'curl/' in low:
+        browser = 'curl'
+    elif 'python' in low:
+        browser = 'Python Client'
+    else:
+        browser = 'Browser'
+
+    return f'{device} · {browser}'
 
 
 # ==========================================================================

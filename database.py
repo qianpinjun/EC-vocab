@@ -170,6 +170,23 @@ def init_db():
             )
         """)
 
+        # Login audit logs (Admin-only visibility: time, device, IP address, status)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT NOT NULL,
+                event_type TEXT DEFAULT 'login',
+                ip_address TEXT DEFAULT '',
+                device_label TEXT DEFAULT '',
+                user_agent TEXT DEFAULT '',
+                success INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_login_logs_created ON login_logs (created_at DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_login_logs_user ON login_logs (LOWER(username))")
+
         # Ensure default local seed user (id=1) exists
         cur.execute("""
             INSERT OR IGNORE INTO users (id, email, username, password_hash)
